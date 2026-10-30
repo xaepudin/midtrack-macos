@@ -179,7 +179,7 @@ struct PlayersView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("Players")
+                    Text("Players to ignore")
                         .font(.title2.bold())
                     Spacer()
                     Button {
@@ -191,13 +191,22 @@ struct PlayersView: View {
                     .help("Re-read the players the reader has seen.")
                 }
 
-                Text("Every player that has held the system Now Playing session appears here. Tick a "
-                    + "player to leave it alone entirely: Midtrack never jumps it, and its sessions "
-                    + "stay out of the baseline, so a browser tab or a video cannot make the song "
-                    + "that is playing look like a new track.")
+                Text("Every player that has held the system Now Playing session appears here. "
+                    + "Ticked means ignored: Midtrack never jumps that player's tracks, and its "
+                    + "session never becomes the baseline — so a browser tab or a video cannot make "
+                    + "the song that is playing look like a new track. Unticked players are jumped "
+                    + "normally.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 16) {
+                    Label("Ticked = ignored", systemImage: "checkmark.square.fill")
+                        .foregroundStyle(.orange)
+                    Label("Unticked = jumped", systemImage: "square")
+                        .foregroundStyle(.secondary)
+                }
+                .font(.caption)
 
                 if model.seenPlayers.isEmpty {
                     ContentUnavailableView(
@@ -209,7 +218,8 @@ struct PlayersView: View {
                 } else {
                     PlayersSection(model: model, compact: false, showsHeading: false)
                     HStack {
-                        Text("\(model.seenPlayers.count) player\(model.seenPlayers.count == 1 ? "" : "s") seen")
+                        let ignored = model.seenPlayers.filter { model.isIgnored($0) }.count
+                        Text("\(ignored) of \(model.seenPlayers.count) ignored")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()

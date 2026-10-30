@@ -51,8 +51,10 @@ jump.
 | **About** | The icon, version, and what Midtrack is (and is not) |
 
 The Control tab is deliberately the same surface as the menu bar panel, just
-roomier. The panel drops the player list to keep the menu bar window short; its
-**Players…** button opens the full tab.
+roomier. The panel is an accordion so it stays menu-bar sized: each time it
+opens, **Players to ignore** is expanded and **Guardrails** starts collapsed (its
+header shows On/Off). Opening one folds the other away. **Players…** in the
+footer opens the full tab.
 
 ### Controls
 
@@ -69,9 +71,28 @@ roomier. The panel drops the player list to keep the menu bar window short; its
 | **Max jump** | Never jump past this percent, so a long jump cannot land in the outro. Default 80%. 0 turns this limit off |
 | **Pos** meter | Green = how far in, orange tick = where the next jump lands (a shaded band in Random mode) |
 | **Status** line | The watcher's narration: baseline, track change, `SEEK … → 1:41`, or *why* it skipped |
-| **Players** | Ticked players are ignored entirely: never jumped, and never allowed to become the baseline |
+| **Players to ignore** | Ticked = ignored, unticked = jumped. Ticked players are never jumped, and their sessions never become the baseline |
 
 Settings persist in `~/Library/Preferences/com.asep.midtrack.plist`.
+
+### Players to ignore
+
+The list is a **deny-list**, not an allow-list. Ticking a player does not select
+it for jumping — it excludes it:
+
+- **Ticked = ignored.** Midtrack never jumps a track published by that player,
+  and that player's session is kept out of the baseline. That second part is
+  what stops a browser tab or a video from making the song that is playing look
+  like a new track. **Jump now** refuses an ignored player too.
+- **Unticked = jumped normally.** The player can own the Now Playing session,
+  become the baseline, and get its new tracks jumped.
+- The player currently holding the session is marked **playing now**. Players
+  appear here after they have published a session at least once; **Refresh**
+  re-reads the list.
+- A session with no player name cannot be matched, so it is never ignored: an
+  unknown name must not be able to turn Midtrack into a silent no-op.
+
+![The Players to ignore tab](docs/midtrack-players.png)
 
 ## How it works
 

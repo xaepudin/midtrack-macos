@@ -49,7 +49,7 @@ struct PanelView: View {
             }
             .controlSize(.small)
         }
-        .padding(14)
+        .padding(12)
         .frame(width: 420)
         // The 10 Hz now-playing values only run while a surface is on screen.
         .onAppear { model.panelAppeared() }

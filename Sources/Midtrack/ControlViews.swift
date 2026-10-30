@@ -95,6 +95,68 @@ struct SectionHeader: View {
     }
 }
 
+/// A section that can be folded away. Only the menu bar panel uses this; the
+/// main window always shows the whole surface. The summary on the right keeps
+/// the state readable while the section is collapsed.
+struct CollapsibleSection<Content: View>: View {
+    let title: String
+    var info: InfoContent? = nil
+    var summary: String? = nil
+    @Binding var isExpanded: Bool
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: isExpanded ? 8 : 0) {
+            HStack(spacing: 6) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        isExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.secondary)
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                            .accessibilityHidden(true)
+                        Text(title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(isExpanded ? "Collapse \(title)" : "Expand \(title)")
+                .accessibilityLabel(title)
+                .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+                .accessibilityHint("Shows or hides \(title.lowercased())")
+
+                if let info {
+                    InfoButton(title: info.title, message: info.message)
+                }
+
+                Spacer(minLength: 0)
+
+                if let summary {
+                    Text(summary)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.primary.opacity(0.06), in: Capsule())
+                }
+            }
+
+            if isExpanded {
+                content
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.easeInOut(duration: 0.18), value: isExpanded)
+    }
+}
+
 /// A horizontal track-position meter: how far into the song playback is, plus
 /// where the next jump lands — a marker for Time/Percent, a band for Random.
 struct TrackMeter: View {
@@ -492,8 +554,9 @@ struct JumpTargetSection: View {
 struct GuardrailsSection: View {
     @ObservedObject var model: AppModel
     var compact: Bool = true
+    var showsHeading: Bool = true
 
-    private let info = InfoContent(
+    static let info = InfoContent(
         title: "Guardrails",
         message: "Min length skips short items — an ad, a jingle, a 26-second video in a browser "
             + "tab. Max jump keeps a jump away from the outro. A track with no known length is "
@@ -501,8 +564,11 @@ struct GuardrailsSection: View {
     )
 
     var body: some View {
-        let content = VStack(alignment: .leading, spacing: compact ? 10 : 16) {
-            SectionHeader(title: "Guardrails", systemImage: "shield.lefthalf.filled", info: info, compact: compact)
+        let content = VStack(alignment: .leading, spacing: compact ? 8 : 16) {
+            if showsHeading {
+                SectionHeader(title: "Guardrails", systemImage: "shield.lefthalf.filled",
+                              info: Self.info, compact: compact)
+            }
 
             HStack(spacing: 6) {
                 Toggle("Enable guardrails", isOn: $model.settings.guardrailsEnabled)
@@ -518,7 +584,7 @@ struct GuardrailsSection: View {
                 Spacer(minLength: 0)
             }
 
-            VStack(alignment: .leading, spacing: compact ? 10 : 16) {
+            VStack(alignment: .leading, spacing: compact ? 8 : 16) {
                 RuleSlider(
                     label: "Min length",
                     value: model.settings.minDurationSeconds == 0
@@ -574,16 +640,28 @@ struct PlayersSection: View {
     var compact: Bool = true
     var showsHeading: Bool = true
 
-    private let info = InfoContent(
-        title: "Players",
-        message: "A ticked player is never jumped, and its sessions stay out of the baseline — "
-            + "so a browser tab or a video cannot yank the song that is playing."
+    static let info = InfoContent(
+        title: "Players to ignore",
+        message: "Ticked = ignored. Midtrack never jumps a ticked player's tracks, and that "
+            + "player's session never becomes the baseline — so a browser tab or a video cannot "
+            + "disturb the song that is playing. Unticked = jumped normally."
     )
 
     var body: some View {
         let content = VStack(alignment: .leading, spacing: compact ? 6 : 12) {
             if showsHeading {
-                SectionHeader(title: "Players", systemImage: "person.wave.2", info: info, compact: compact)
+                SectionHeader(title: "Players to ignore", systemImage: "person.wave.2",
+                              info: Self.info, compact: compact)
+            }
+
+            if compact || showsHeading {
+                Text(compact
+                    ? "Ticked = ignored (never jumped, never the baseline) · unticked = jumped."
+                    : "Ticked = ignored: Midtrack never jumps that player's tracks, and its session "
+                        + "never becomes the baseline. Unticked = jumped normally.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             if model.seenPlayers.isEmpty {
@@ -597,15 +675,12 @@ struct PlayersSection: View {
                         row(player)
                     }
                 }
+                if compact, model.seenPlayers.count > 4 {
+                    Text("+\(model.seenPlayers.count - 4) more in Players…")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
             }
-
-            Text(compact
-                ? "Ticked players are ignored entirely."
-                : "Ticked players are ignored entirely: never jumped, and never used as the track "
-                    + "the next one is compared with.")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -617,22 +692,34 @@ struct PlayersSection: View {
     }
 
     private func row(_ player: String) -> some View {
-        HStack(spacing: 8) {
+        let ignored = model.isIgnored(player)
+        var tags: [String] = []
+        if player == model.activePlayer { tags.append("playing now") }
+        if ignored { tags.append("ignored") }
+
+        return HStack(spacing: 8) {
             Toggle(player, isOn: Binding(get: { model.isIgnored(player) },
                                          set: { model.setIgnored($0, forPlayer: player) }))
                 .toggleStyle(.checkbox)
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .help(model.isIgnored(player)
-                      ? "Never jump anything published by \(player)"
-                      : "Leave \(player) alone")
-            if player == model.activePlayer {
-                Text("playing now")
+                .help(ignored
+                      ? "This player is ignored: Midtrack leaves its tracks alone. Click to jump them again."
+                      : "This player is jumped normally. Click to ignore it.")
+                .accessibilityHint(ignored
+                    ? "Ignored: Midtrack leaves this player's tracks alone"
+                    : "Jumped: Midtrack may jump this player's tracks")
+            if !tags.isEmpty {
+                Text(tags.joined(separator: " · "))
                     .font(.caption2.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ignored ? Color.orange : Color.secondary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.secondary.opacity(0.10), in: Capsule())
+                    .background(
+                        (ignored ? Color.orange : Color.secondary).opacity(0.10),
+                        in: Capsule()
+                    )
+                    .lineLimit(1)
             }
             Spacer(minLength: 0)
         }
@@ -715,6 +802,38 @@ struct MidtrackControls: View {
     @ObservedObject var status: StatusStore
     var compact: Bool = true
 
+    /// The panel is an accordion: opening Guardrails folds Players away and
+    /// vice versa, so the menu bar window stays a reasonable height. Players is
+    /// open by default so the ignore selection is visible without a click.
+    private enum PanelSection: String {
+        case none
+        case guardrails
+        case players
+    }
+
+    @AppStorage("PanelExpandedSection") private var expandedSectionRaw = PanelSection.players.rawValue
+
+    private var expandedSection: PanelSection {
+        PanelSection(rawValue: expandedSectionRaw) ?? .players
+    }
+
+    private func expansion(for section: PanelSection) -> Binding<Bool> {
+        Binding(
+            get: { expandedSection == section },
+            set: { isExpanded in
+                expandedSectionRaw = isExpanded ? section.rawValue : PanelSection.none.rawValue
+            }
+        )
+    }
+
+    private var guardrailsSummary: String {
+        model.settings.guardrailsEnabled ? "On" : "Off"
+    }
+
+    private var playersSummary: String {
+        model.ignoredPlayers.isEmpty ? "None ignored" : "\(model.ignoredPlayers.count) ignored"
+    }
+
     var body: some View {
         Group {
             if compact {
@@ -724,25 +843,42 @@ struct MidtrackControls: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear {
+            // Each time the menu bar panel opens, show the player selection and
+            // start Guardrails folded away. The accordion only changes while the
+            // panel is on screen.
+            if compact { expandedSectionRaw = PanelSection.players.rawValue }
+        }
     }
 
     private var compactLayout: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             StatusHeader(model: model, status: status, compact: true)
             Divider()
             NowPlayingSection(model: model, nowPlaying: nowPlaying, compact: true)
             Divider()
             JumpTargetSection(model: model, compact: true)
             Divider()
-            GuardrailsSection(model: model, compact: true)
+            CollapsibleSection(
+                title: "Guardrails",
+                info: GuardrailsSection.info,
+                summary: guardrailsSummary,
+                isExpanded: expansion(for: .guardrails)
+            ) {
+                GuardrailsSection(model: model, compact: true, showsHeading: false)
+            }
+            Divider()
+            CollapsibleSection(
+                title: "Players to ignore",
+                info: PlayersSection.info,
+                summary: playersSummary,
+                isExpanded: expansion(for: .players)
+            ) {
+                PlayersSection(model: model, compact: true, showsHeading: false)
+            }
             StatusMessages(model: model, compact: true)
             Divider()
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Status")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                InfoFooter(model: model, compact: true)
-            }
+            InfoFooter(model: model, compact: true)
         }
     }
 

@@ -9,9 +9,13 @@ First Midtrack release: **Skip to the good part — automatically.**
   **Settings**, and **About** tabs, alongside the menu bar panel.
 - A first-run welcome sheet, a Dock icon while a window is open, and a menu bar
   item that returns to accessory mode when the window closes.
-- A **Players** tab for the ignore list, with the active player marked.
+- A **Players to ignore** tab with a plain-language ticked/unticked legend and
+  the active player marked.
 - An **Enable guardrails** switch, off by default. While off, Min length and Max
   jump are ignored and their sliders are locked; turning it on applies both.
+- A collapsible menu bar panel: **Players to ignore** opens by default, while
+  **Guardrails** starts collapsed. Opening one folds the other away so the panel
+  stays menu-bar sized.
 - A diagnostics page with live status, log access, a copyable report, and the
   `--check` command.
 - A monochrome template version of the app mark for the menu bar, dimmed while
