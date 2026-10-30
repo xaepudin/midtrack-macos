@@ -18,7 +18,7 @@ public enum Prefs {
         }
     }
 
-    public static let suiteName = "com.asep.midtrack"
+    public static let suiteName = "com.xaepudin.midtrack"
 
     /// Swappable so the test suite writes to a throwaway domain instead of the
     /// real preferences of whoever runs the tests.
@@ -28,6 +28,24 @@ public enum Prefs {
         if Bundle.main.bundleIdentifier == suiteName { return .standard }
         return UserDefaults(suiteName: suiteName) ?? .standard
     }()
+
+    /// Copies the preferences of the previous bundle identifier
+    /// (`com.asep.midtrack`) into this one on first launch. The identifier is
+    /// the only thing that changed, so the rule, ignore list, onboarding state,
+    /// and window frame should survive the move.
+    public static func migratePreviousBundleIdentifierIfNeeded() {
+        let marker = "migratedFromPreviousBundleIdentifier"
+        guard !store.bool(forKey: marker) else { return }
+        store.set(true, forKey: marker)
+        guard store.object(forKey: Key.enabled) == nil else { return }
+
+        let previous = "com.asep.midtrack"
+        guard let legacy = UserDefaults(suiteName: previous),
+              let domain = legacy.persistentDomain(forName: previous) else { return }
+        for (key, value) in domain where store.object(forKey: key) == nil {
+            store.set(value, forKey: key)
+        }
+    }
 
     /// Guardrail defaults, the same as the Android app. They only apply while
     /// `guardrailsEnabled` is on.

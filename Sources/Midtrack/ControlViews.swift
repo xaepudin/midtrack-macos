@@ -202,17 +202,33 @@ struct StatusHeader: View {
 
             Spacer(minLength: 8)
 
-            Text(status.enabled ? "Running" : "Paused")
-                .font(.caption.weight(.semibold))
-                .padding(.horizontal, 9)
-                .padding(.vertical, 4)
-                .foregroundStyle(status.enabled ? Color.green : Color.secondary)
-                .background(
-                    status.enabled ? Color.green.opacity(0.13) : Color.secondary.opacity(0.11),
-                    in: Capsule()
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(status.enabled ? Color.green : Color.secondary.opacity(0.55))
+                    .frame(width: 6, height: 6)
+                    .accessibilityHidden(true)
+                Text(status.enabled ? "Running" : "Paused")
+                    .font(.caption.weight(.semibold))
+            }
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            // The label itself stays in the primary text colour so it keeps its
+            // contrast on the translucent menu bar material; the dot and tint
+            // carry the green/grey meaning.
+            .foregroundStyle(.primary)
+            .background(
+                status.enabled ? Color.green.opacity(0.16) : Color.secondary.opacity(0.11),
+                in: Capsule()
+            )
+            .overlay(
+                Capsule().strokeBorder(
+                    status.enabled ? Color.green.opacity(0.32) : Color.clear,
+                    lineWidth: 1
                 )
-                .accessibilityLabel("Status")
-                .accessibilityValue(status.enabled ? "Running" : "Paused")
+            )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Status")
+            .accessibilityValue(status.enabled ? "Running" : "Paused")
 
             Button(status.enabled ? "Pause" : "Start") {
                 model.toggleEnabled()
@@ -765,12 +781,20 @@ struct PlayersSection: View {
             if !tags.isEmpty {
                 Text(tags.joined(separator: " · "))
                     .font(.caption2.weight(.medium))
-                    .foregroundStyle(ignored ? Color.orange : Color.secondary)
+                    // Primary text keeps "ignored" legible on the orange tint;
+                    // the tint and border carry the warning colour.
+                    .foregroundStyle(ignored ? Color.primary : Color.secondary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(
-                        (ignored ? Color.orange : Color.secondary).opacity(0.10),
+                        ignored ? Color.orange.opacity(0.16) : Color.secondary.opacity(0.10),
                         in: Capsule()
+                    )
+                    .overlay(
+                        Capsule().strokeBorder(
+                            ignored ? Color.orange.opacity(0.38) : Color.clear,
+                            lineWidth: 1
+                        )
                     )
                     .lineLimit(1)
             }

@@ -36,6 +36,10 @@ struct MidtrackApp: App {
     private let suppressWelcomeAtLaunch = CommandLine.arguments.contains("--show-main")
 
     init() {
+        // The app's bundle identifier changed; carry the old defaults over
+        // before AppModel or any @AppStorage reads them.
+        Prefs.migratePreviousBundleIdentifierIfNeeded()
+
         // `--check` and the render modes inspect the environment and exit; they
         // must run before the menu bar UI (and the reader it starts) exists.
         Diagnostics.runIfRequested()

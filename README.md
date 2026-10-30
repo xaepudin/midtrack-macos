@@ -73,7 +73,7 @@ Midtrack**.
 | **Status** line | The watcher's narration: baseline, track change, `SEEK … → 1:41`, or *why* it skipped |
 | **Players to ignore** | Ticked = ignored, unticked = jumped. Ticked players are never jumped, and their sessions never become the baseline |
 
-Settings persist in `~/Library/Preferences/com.asep.midtrack.plist`.
+Settings persist in `~/Library/Preferences/com.xaepudin.midtrack.plist`.
 
 ### Players to ignore
 
@@ -176,7 +176,7 @@ now-playing snapshot:
 
 ```
 Midtrack self-check
-  bundle          : com.asep.midtrack (…/dist/Midtrack.app)
+  bundle          : com.xaepudin.midtrack (…/dist/Midtrack.app)
   reader script   : …/Contents/Resources/reader.js (found)
   MediaRemote seek: available
   settings        : on · Random · jump somewhere between 15% and 60% · guardrails off · auto-next on
@@ -224,10 +224,11 @@ message changes.
 
 ## Identity
 
-- Bundle identifier **`com.asep.midtrack`**, executable **`Midtrack`**, app
+- Bundle identifier **`com.xaepudin.midtrack`**, executable **`Midtrack`**, app
   **`dist/Midtrack.app`**, launcher **`./Midtrack`**.
-- Preferences live in `com.asep.midtrack`, logs in
-  `~/Library/Logs/Midtrack/app.log`.
+- Preferences live in `com.xaepudin.midtrack`, logs in
+  `~/Library/Logs/Midtrack/app.log`. The first launch after the identifier
+  change copies the previous `com.asep.midtrack` defaults once.
 - The app icon is drawn by `scripts/make-icon.py`: a teal waveform bisected by an
   orange midpoint marker. The menu bar uses the same mark as a monochrome
   template image, dimmed while paused.

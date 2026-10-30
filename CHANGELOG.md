@@ -29,6 +29,8 @@ First Midtrack release: **Skip to the good part — automatically.**
 - Rebuilt the panel and controls in the visual language of Konvolusi: card
   surfaces, section headers, ⓘ popovers, monospaced values, and shared controls
   between the panel and the window.
+- The bundle identifier is **`com.xaepudin.midtrack`**; existing Midtrack
+  defaults are copied once from `com.asep.midtrack`.
 - The status line now calls the master switch **Running/Paused** rather than
   on/off, matching the Start/Pause button.
 - The panel is 420 pt wide and shows the **Players to ignore** list directly.
