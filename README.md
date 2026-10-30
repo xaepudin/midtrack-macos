@@ -64,7 +64,7 @@ footer opens the full tab.
 | **Jump now** | Applies the rule to the song **already playing** — the Android app's third notification button. It ignores the dedup and the min-length limit (an explicit “do it anyway”), but still refuses a track with no known length. Greyed out, with the reason, while paused or when nothing is playing |
 | **Time / Percent / Random** | How the jump target is chosen |
 | **Seconds / Percent into the song** | A fixed offset, or the fraction of every track |
-| **From / To** | The window Random picks from |
+| **Random window** | One two-handle slider; drag either end to set where Random may land |
 | **Also seek on natural end** | Off = only seek tracks you skipped to; tracks that ended by themselves are left alone |
 | **Enable guardrails** | Off by default. While off, Min length and Max jump are ignored and their sliders are locked; turning it on applies the values below |
 | **Min length** | Nothing shorter than this is jumped — an ad, a jingle, a 26-second X/Threads video. It keys on the *track's length*, not on which app is playing. Default 1:30. 0 turns this limit off |
@@ -179,11 +179,11 @@ Midtrack self-check
   bundle          : com.asep.midtrack (…/dist/Midtrack.app)
   reader script   : …/Contents/Resources/reader.js (found)
   MediaRemote seek: available
-  settings        : on · Time · jump to 1:30 · guardrails off · auto-next on
-  ignoring        : nobody
-  seen players    : YouTube Music, Google Chrome, mpv, IINA, Cog
+  settings        : on · Random · jump somewhere between 15% and 60% · guardrails off · auto-next on
+  ignoring        : IINA, mpv
+  seen players    : Google Chrome, YouTube Music, mpv, IINA, Cog
   log             : /Users/asep/Library/Logs/Midtrack/app.log
-  now playing     : YouTube Music · DAUN DAUN — Ghea Indrawari (4:35 / 4:35, rate 0.0)
+  now playing     : Google Chrome · Instagram (0:00 / 1:00, rate 1.0)
 RESULT: PASS — the seek API is reachable and reader.js is producing snapshots.
 ```
 

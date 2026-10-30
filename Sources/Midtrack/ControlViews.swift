@@ -109,15 +109,17 @@ struct CollapsibleSection<Content: View>: View {
         VStack(alignment: .leading, spacing: isExpanded ? 8 : 0) {
             HStack(spacing: 6) {
                 Button {
-                    withAnimation(.easeInOut(duration: 0.18)) {
-                        isExpanded.toggle()
-                    }
+                    // Deliberately not animated: the menu bar window changes its
+                    // height with the content, and animating that resize made the
+                    // panel clip and stutter. The chevron still eases around.
+                    isExpanded.toggle()
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(.secondary)
                             .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                            .animation(.easeOut(duration: 0.12), value: isExpanded)
                             .accessibilityHidden(true)
                         Text(title)
                             .font(.caption.weight(.semibold))
@@ -149,11 +151,9 @@ struct CollapsibleSection<Content: View>: View {
 
             if isExpanded {
                 content
-                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .animation(.easeInOut(duration: 0.18), value: isExpanded)
     }
 }
 
@@ -440,6 +440,122 @@ struct RuleSlider: View {
     }
 }
 
+/// A two-thumb slider for the random window. SwiftUI's `Slider` is
+/// single-value, so this draws one track with two draggable thumbs and a filled
+/// segment between them. The window is always ordered and inclusive.
+struct PercentRangeSlider: View {
+    @Binding var window: ClosedRange<Int>
+    var tint: Color = .accentColor
+
+    private let bounds = 1...99
+    private let thumbSize: CGFloat = 22
+    private let trackHeight: CGFloat = 4
+    private let spaceName = "percentRangeSlider"
+
+    var body: some View {
+        GeometryReader { geometry in
+            let usable = max(1, geometry.size.width - thumbSize)
+            let lowX = thumbSize / 2 + usable * fraction(window.lowerBound)
+            let highX = thumbSize / 2 + usable * fraction(window.upperBound)
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.primary.opacity(0.10))
+                    .frame(height: trackHeight)
+                    .padding(.horizontal, thumbSize / 2)
+
+                Capsule()
+                    .fill(tint)
+                    .frame(width: max(0, highX - lowX), height: trackHeight)
+                    .offset(x: lowX)
+
+                thumb(at: lowX, isLower: true, usable: usable)
+                thumb(at: highX, isLower: false, usable: usable)
+            }
+            .coordinateSpace(name: spaceName)
+        }
+        .frame(height: thumbSize)
+        .accessibilityElement(children: .contain)
+        .help("Drag either end to set the random window")
+    }
+
+    private func thumb(at x: CGFloat, isLower: Bool, usable: CGFloat) -> some View {
+        let value = isLower ? window.lowerBound : window.upperBound
+        return Circle()
+            .fill(.white)
+            .overlay(
+                Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+            )
+            .frame(width: thumbSize, height: thumbSize)
+            .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
+            .offset(x: x - thumbSize / 2)
+            .gesture(dragGesture(isLower: isLower, usable: usable))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(isLower ? "Random window start" : "Random window end")
+            .accessibilityValue("\(value) percent")
+            .accessibilityHint("Drag or adjust to move this end of the random window")
+            .accessibilityAdjustableAction { direction in
+                adjust(isLower: isLower, by: direction == .increment ? 1 : -1)
+            }
+    }
+
+    private func dragGesture(isLower: Bool, usable: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named(spaceName))
+            .onChanged { drag in
+                let x = min(max(drag.location.x - thumbSize / 2, 0), usable)
+                let span = CGFloat(bounds.upperBound - bounds.lowerBound)
+                let stepped = Int((x / usable * span).rounded()) + bounds.lowerBound
+                let value = min(max(stepped, bounds.lowerBound), bounds.upperBound)
+
+                if isLower {
+                    let lower = min(value, window.upperBound)
+                    if lower != window.lowerBound { window = lower...window.upperBound }
+                } else {
+                    let upper = max(value, window.lowerBound)
+                    if upper != window.upperBound { window = window.lowerBound...upper }
+                }
+            }
+    }
+
+    private func adjust(isLower: Bool, by delta: Int) {
+        if isLower {
+            let lower = min(max(window.lowerBound + delta, bounds.lowerBound), window.upperBound)
+            if lower != window.lowerBound { window = lower...window.upperBound }
+        } else {
+            let upper = min(max(window.upperBound + delta, window.lowerBound), bounds.upperBound)
+            if upper != window.upperBound { window = window.lowerBound...upper }
+        }
+    }
+
+    private func fraction(_ value: Int) -> CGFloat {
+        let span = CGFloat(bounds.upperBound - bounds.lowerBound)
+        let clamped = min(max(value, bounds.lowerBound), bounds.upperBound)
+        return CGFloat(clamped - bounds.lowerBound) / span
+    }
+}
+
+struct PercentRangeRow: View {
+    @Binding var window: ClosedRange<Int>
+    let info: InfoContent
+    var compact = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text("Random window")
+                    .font(compact ? .caption.weight(.medium) : .subheadline.weight(.medium))
+                InfoButton(title: info.title, message: info.message)
+                Spacer()
+                Text("\(window.lowerBound)% – \(window.upperBound)%")
+                    .font(compact ? .caption.monospacedDigit() : .subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+            }
+            PercentRangeSlider(window: $window)
+        }
+    }
+}
+
 struct JumpTargetSection: View {
     @ObservedObject var model: AppModel
     var compact: Bool = true
@@ -493,29 +609,20 @@ struct JumpTargetSection: View {
                     compact: compact
                 )
             case .random:
-                RuleSlider(
-                    label: "From",
-                    value: "\(model.settings.randomMin)%",
-                    binding: $model.settings.int(\.randomMin),
-                    range: 1...99,
-                    step: 1,
-                    info: InfoContent(
-                        title: "Random window",
-                        message: "Random draws a new spot from this window for every track. "
-                            + "From and To are both percentages of the track."
+                PercentRangeRow(
+                    window: Binding(
+                        get: { model.settings.window },
+                        set: { range in
+                            var next = model.settings
+                            next.randomMin = range.lowerBound
+                            next.randomMax = range.upperBound
+                            model.settings = next
+                        }
                     ),
-                    compact: compact
-                )
-                RuleSlider(
-                    label: "To",
-                    value: "\(model.settings.randomMax)%",
-                    binding: $model.settings.int(\.randomMax),
-                    range: 1...99,
-                    step: 1,
                     info: InfoContent(
                         title: "Random window",
-                        message: "Random draws a new spot from this window for every track. "
-                            + "The window is ordered for you if the two ends cross."
+                        message: "Random picks a fresh spot inside this window for every track. "
+                            + "Drag either end to move the start or the end of the window."
                     ),
                     compact: compact
                 )

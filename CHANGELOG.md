@@ -16,6 +16,8 @@ First Midtrack release: **Skip to the good part — automatically.**
 - A collapsible menu bar panel: **Players to ignore** opens by default, while
   **Guardrails** starts collapsed. Opening one folds the other away so the panel
   stays menu-bar sized.
+- A two-handle **Random window** slider for Random mode, replacing the separate
+  From and To sliders.
 - A diagnostics page with live status, log access, a copyable report, and the
   `--check` command.
 - A monochrome template version of the app mark for the menu bar, dimmed while
@@ -37,5 +39,7 @@ First Midtrack release: **Skip to the good part — automatically.**
 ### Fixed
 - Slider values snap while the track stays continuous, so macOS no longer draws
   a tick mark for every integer.
+- Panel disclosure no longer animates the menu bar window height — only the
+  chevron eases — so expanding a section no longer clips or stutters.
 - Preferences no longer ask `UserDefaults` for the app's own bundle identifier
   as a suite (which Foundation rejects).
