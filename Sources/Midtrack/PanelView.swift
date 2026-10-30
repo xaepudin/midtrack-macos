@@ -1,0 +1,58 @@
+import AppKit
+import MidtrackKit
+import SwiftUI
+
+/// The menu bar quick panel. It uses the same `MidtrackControls` as the main
+/// window, plus explicit entry points to the conventional window and Settings.
+struct PanelView: View {
+    var model: AppModel
+    var nowPlaying: NowPlayingStore
+    var status: StatusStore
+
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            MidtrackControls(model: model, nowPlaying: nowPlaying, status: status, compact: true)
+
+            Divider()
+
+            HStack(spacing: 6) {
+                Button("Open Midtrack…") {
+                    openWindow(id: "main")
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+                .help("Open the full Midtrack window.")
+                .accessibilityHint("Opens the full Midtrack window")
+
+                Button("Players…") {
+                    UserDefaults.standard.set(MainTab.players.rawValue, forKey: "MainTab")
+                    openWindow(id: "main")
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+                .help("Choose which players Midtrack leaves alone.")
+                .accessibilityHint("Opens the players Midtrack leaves alone")
+
+                Button("Settings…") {
+                    UserDefaults.standard.set(MainTab.settings.rawValue, forKey: "MainTab")
+                    openWindow(id: "main")
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+                .help("Open Midtrack settings.")
+                .accessibilityHint("Opens Midtrack settings")
+
+                Spacer()
+
+                Button("Quit Midtrack") { model.quit() }
+                    .help("Stop watching now-playing and quit Midtrack.")
+                    .accessibilityHint("Stops watching now-playing and quits Midtrack")
+            }
+            .controlSize(.small)
+        }
+        .padding(14)
+        .frame(width: 420)
+        // The 10 Hz now-playing values only run while a surface is on screen.
+        .onAppear { model.panelAppeared() }
+        .onDisappear { model.panelDisappeared() }
+    }
+}

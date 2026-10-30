@@ -1,3 +1,0 @@
-#!/bin/bash
-# Legacy launcher: the app now lives in dist/SongSeeker.app.
-exec "$(cd "$(dirname "$0")" && pwd)/dist/SongSeeker.app/Contents/MacOS/SongSeeker" "$@"

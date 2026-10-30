@@ -1,8 +1,9 @@
-// Persistent now-playing reader for YTM Radio Seek (macOS).
+// Persistent now-playing reader for Midtrack (macOS).
 // Runs as: osascript -l JavaScript reader.js
 // osascript is Apple-signed, which is what grants the private MediaRemote read
 // on modern macOS; a normal helper binary gets nil for the same calls.
-// Prints one JSON line per second: {"app":…,"t":title,"a":artist,"d":duration,"e":elapsed,"r":rate}
+// Prints one JSON line per snapshot (10 Hz, plus a line per MediaRemote change):
+// {"app":…,"t":title,"a":artist,"d":duration,"e":elapsed,"r":rate}
 
 ObjC.import('Foundation')
 

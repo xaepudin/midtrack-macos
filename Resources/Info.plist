@@ -5,24 +5,32 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>SongSeeker</string>
+	<string>Midtrack</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.asep.songseeker</string>
+	<string>com.asep.midtrack</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Song Seeker</string>
+	<string>Midtrack</string>
 	<key>CFBundleDisplayName</key>
-	<string>Song Seeker</string>
+	<string>Midtrack</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.0</string>
+	<string>1.0.0</string>
 	<key>CFBundleVersion</key>
-	<string>2</string>
+	<string>1</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.music</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>15.0</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Asep Saepudin. Personal use.</string>
 	<key>LSUIElement</key>
+	<true/>
+	<key>LSMultipleInstancesProhibited</key>
 	<true/>
 	<key>NSHighResolutionCapable</key>
 	<true/>

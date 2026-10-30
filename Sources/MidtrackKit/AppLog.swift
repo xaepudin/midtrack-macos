@@ -1,13 +1,12 @@
 import Foundation
 
-/// A small append-only log, the same shape IRSVerb keeps: a menu bar accessory
-/// has nowhere to print, so anything worth knowing goes to
-/// `~/Library/Logs/SongSeeker/app.log`.
+/// A small append-only log: a menu bar accessory has nowhere to print, so
+/// anything worth knowing goes to `~/Library/Logs/Midtrack/app.log`.
 public enum AppLog {
     public static let url: URL = {
         let base = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library")
-        let directory = base.appendingPathComponent("Logs/SongSeeker")
+        let directory = base.appendingPathComponent("Logs/Midtrack")
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory.appendingPathComponent("app.log")
     }()

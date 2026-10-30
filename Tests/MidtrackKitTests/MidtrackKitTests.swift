@@ -1,9 +1,9 @@
 import XCTest
-@testable import SongSeekerKit
+@testable import MidtrackKit
 
 /// The tests run against a throwaway preferences domain so they can never touch
 /// the real settings of whoever runs them.
-private let testSuite = "SongSeekerKitTests"
+private let testSuite = "MidtrackKitTests"
 
 private func resetPreferences() {
     Prefs.store = UserDefaults(suiteName: testSuite)!
@@ -561,5 +561,59 @@ final class WatcherTests: XCTestCase {
         watcher.tick(snap("B", 200, 0))
         XCTAssertEqual(Prefs.lastJumpTitle, "B")
         XCTAssertEqual(Prefs.lastJumpAt, 40, accuracy: 0.0001)
+    }
+}
+
+final class PreferencesMigrationTests: XCTestCase {
+    private let legacySuite = "MidtrackKitTests.Legacy"
+
+    override func setUp() {
+        super.setUp()
+        resetPreferences()
+        UserDefaults(suiteName: legacySuite)?.removePersistentDomain(forName: legacySuite)
+    }
+
+    override func tearDown() {
+        Prefs.store.removePersistentDomain(forName: testSuite)
+        UserDefaults(suiteName: legacySuite)?.removePersistentDomain(forName: legacySuite)
+        super.tearDown()
+    }
+
+    func testLegacySettingsAreCopiedOnce() {
+        let legacy = UserDefaults(suiteName: legacySuite)!
+        legacy.set(false, forKey: "enabled")
+        legacy.set(42, forKey: "relativePercent")
+        legacy.set(["Google Chrome"], forKey: "ignoredPlayers")
+
+        Prefs.migrateLegacySettings(from: [legacySuite], marker: "testMigration")
+
+        XCTAssertFalse(Prefs.enabled)
+        XCTAssertEqual(Prefs.relativePercent, 42)
+        XCTAssertEqual(Prefs.ignoredPlayers, ["Google Chrome"])
+
+        // A later change is not undone by the migration running again.
+        Prefs.relativePercent = 20
+        Prefs.migrateLegacySettings(from: [legacySuite], marker: "testMigration")
+        XCTAssertEqual(Prefs.relativePercent, 20)
+    }
+
+    func testAnExistingMidtrackDomainIsNotOverwritten() {
+        Prefs.enabled = true
+        Prefs.relativePercent = 33
+
+        let legacy = UserDefaults(suiteName: legacySuite)!
+        legacy.set(false, forKey: "enabled")
+        legacy.set(42, forKey: "relativePercent")
+
+        Prefs.migrateLegacySettings(from: [legacySuite], marker: "anotherMigration")
+
+        XCTAssertTrue(Prefs.enabled)
+        XCTAssertEqual(Prefs.relativePercent, 33)
+    }
+
+    func testMissingLegacyDomainLeavesDefaults() {
+        Prefs.migrateLegacySettings(from: ["MidtrackKitTests.DoesNotExist"], marker: "noLegacy")
+        XCTAssertEqual(Prefs.relativePercent, 20)
+        XCTAssertTrue(Prefs.enabled)
     }
 }

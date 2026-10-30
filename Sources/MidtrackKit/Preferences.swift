@@ -2,8 +2,9 @@ import Foundation
 
 /// Persisted settings.
 ///
-/// The suite name is the one the original AppKit build used, so an upgraded app
-/// keeps whatever the user had already configured.
+/// Midtrack writes its own preferences domain. The first launch copies the
+/// settings of the app it was renamed from (Song Seeker), so a rebrand does not
+/// silently reset the rule, the ignore list, or the last jump.
 public enum Prefs {
     public enum Mode: String, CaseIterable, Identifiable {
         case absolute
@@ -21,11 +22,16 @@ public enum Prefs {
         }
     }
 
-    public static let suiteName = "com.asep.ytmradioseek.mac"
+    public static let suiteName = "com.asep.midtrack"
 
     /// Swappable so the test suite writes to a throwaway domain instead of the
     /// real preferences of whoever runs the tests.
-    static var store: UserDefaults = UserDefaults(suiteName: suiteName) ?? .standard
+    static var store: UserDefaults = {
+        // The app's own bundle identifier is already the standard domain; asking
+        // UserDefaults for it as a suite is rejected by Foundation.
+        if Bundle.main.bundleIdentifier == suiteName { return .standard }
+        return UserDefaults(suiteName: suiteName) ?? .standard
+    }()
 
     /// Guardrail defaults, the same as the Android app.
     public static let defaultMinDurationSeconds = 90
@@ -173,6 +179,45 @@ public enum Prefs {
     }
 
     // MARK: - Helpers
+
+    /// Copies the settings of the pre-rename app on first launch.
+    ///
+    /// Song Seeker stored everything in `com.asep.ytmradioseek.mac`; the earlier
+    /// AppKit build used `com.asep.songseeker`. Only a virgin Midtrack domain is
+    /// filled, and only once, so a later deliberate reset is not undone on the
+    /// next launch.
+    public static func migrateLegacySettingsIfNeeded() {
+        migrateLegacySettings(from: ["com.asep.ytmradioseek.mac", "com.asep.songseeker"],
+                             marker: "migratedFromSongSeeker")
+    }
+
+    /// The injectable form, so the tests can exercise the copy without touching
+    /// the real legacy domain.
+    static func migrateLegacySettings(from legacyDomains: [String], marker: String) {
+        guard !store.bool(forKey: marker) else { return }
+        store.set(true, forKey: marker)
+        guard store.object(forKey: Key.enabled) == nil else { return }
+
+        let keys = [
+            Key.enabled, Key.mode, Key.absoluteSeconds, Key.relativePercent,
+            Key.randomMin, Key.randomMax, Key.seekOnAutoNext,
+            Key.minDurationSeconds, Key.maxTargetPercent,
+            Key.lastJumpTitle, Key.lastJumpAt,
+            Key.ignoredPlayers, Key.seenPlayers,
+        ]
+
+        for domain in legacyDomains {
+            guard let legacy = UserDefaults(suiteName: domain) else { continue }
+            let present = keys.filter { legacy.object(forKey: $0) != nil }
+            guard !present.isEmpty else { continue }
+            for key in present {
+                if let value = legacy.object(forKey: key), store.object(forKey: key) == nil {
+                    store.set(value, forKey: key)
+                }
+            }
+            return
+        }
+    }
 
     /// Keys of features this build no longer has (the per-player rules). Dropped
     /// once on launch so an upgraded preferences file stays legible. The ignore

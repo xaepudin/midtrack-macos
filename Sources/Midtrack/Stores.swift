@@ -1,5 +1,5 @@
 import Foundation
-import SongSeekerKit
+import MidtrackKit
 import SwiftUI
 
 /// Rarely-changing status, kept apart from `AppModel` so the menu bar icon can
@@ -8,13 +8,13 @@ final class StatusStore: ObservableObject {
     @Published var enabled = Prefs.enabled
 }
 
-/// The ~10 Hz now-playing values the panel draws.
+/// The ~10 Hz now-playing values the panel and main window draw.
 ///
 /// Deliberately not part of `AppModel`: the `MenuBarExtra` scene observes that
 /// object, and every `@Published` change there re-renders the whole scene — even
-/// while the panel is closed. IRSVerb measured that pattern at ~12% of a CPU core
-/// doing nothing, so the fast values live in their own store that only the
-/// panel's status rows observe.
+/// while the panel is closed. Konvolusi measured that pattern at ~12% of a CPU
+/// core doing nothing, so the fast values live in their own store that only the
+/// status rows observe.
 final class NowPlayingStore: ObservableObject {
     @Published var app = ""
     @Published var title = ""

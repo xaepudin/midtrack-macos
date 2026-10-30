@@ -1,7 +1,7 @@
 import AppKit
 import Combine
 import Foundation
-import SongSeekerKit
+import MidtrackKit
 import SwiftUI
 
 @MainActor
@@ -11,7 +11,7 @@ final class AppModel: ObservableObject {
     @Published var enabled: Bool = Prefs.enabled {
         didSet {
             guard enabled != oldValue else { return }
-            Prefs.enabled = enabled
+            if !isStaging { Prefs.enabled = enabled }
             status.enabled = enabled
             AppLog.write("enabled -> \(enabled)")
             refreshSummary()
@@ -53,12 +53,17 @@ final class AppModel: ObservableObject {
     let nowPlaying = NowPlayingStore()
     let status = StatusStore()
 
+    let appVersion: String
+    let appBuild: String
+
     private let watcher = Watcher()
     private var reader: JXAReader?
     private var latest: JXAReader.Snapshot?
     private var readerState = "starting"
     private var healthTimer: Timer?
-    private var panelVisible = false
+    /// How many surfaces (menu bar panel, main window) are on screen. The
+    /// 10 Hz values are mirrored only while at least one of them is visible.
+    private var visibleSurfaces = 0
     private var hasStarted = false
     private var hasSeenTrack = false
     private var isStaging = false
@@ -66,6 +71,8 @@ final class AppModel: ObservableObject {
     private var lastTrackSeenAt = Date()
 
     init() {
+        appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        appBuild = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
         lastJumpText = Prefs.lastJumpTitle.map { "\($0) → \(SeekLogic.format(Prefs.lastJumpAt))" } ?? "none yet"
         // No reader, timer or file work here: SwiftUI is allowed to evaluate the
         // StateObject closure more than once, and a second reader would mean two
@@ -119,15 +126,20 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// Staging for `--render-panel`: runs the real watcher over `snapshot` with
-    /// the seek stubbed out, so a photograph of the panel shows text produced by
-    /// the production path without starting the reader or moving playback.
+    /// Staging for `--render-panel` / `--render-window`: runs the real watcher
+    /// over `snapshot` with the seek stubbed out, so a photograph shows text
+    /// produced by the production path without starting the reader or moving
+    /// playback.
     func stageForPreview(snapshot: JXAReader.Snapshot?) {
         isStaging = true
         defer { isStaging = false }
         wireWatcher()
         watcher.seek = { _ in true }
         watcher.recordJump = { _, _ in }
+        watcher.isEnabled = { true }
+        // Show the running state in screenshots without writing the preference:
+        // `enabled` skips persistence while staging.
+        enabled = true
         // One synthetic baseline, then the live snapshot: the watcher then
         // narrates the change exactly as it would for a real track change.
         received(JXAReader.Snapshot(app: "Preview",
@@ -139,15 +151,29 @@ final class AppModel: ObservableObject {
                                     timestamp: Date().timeIntervalSince1970))
         // The live snapshot when a player is publishing one, an example track
         // otherwise, so a render always shows the position meter and the marker.
-        let staged = (snapshot?.identity == nil) ? nil : snapshot
-        received(staged ?? JXAReader.Snapshot(app: "YouTube Music",
-                                             title: "Example song",
-                                             artist: "Example artist",
-                                             duration: 214,
-                                             elapsed: 12,
-                                             rate: 1,
-                                             timestamp: Date().timeIntervalSince1970))
-        panelAppeared()
+        // The position is pinned to 12 s so the demonstration shows the seek
+        // path rather than the watcher correctly refusing a track already past
+        // its target.
+        let staged: JXAReader.Snapshot
+        if let snapshot, snapshot.identity != nil {
+            staged = JXAReader.Snapshot(app: snapshot.app ?? "YouTube Music",
+                                        title: snapshot.title ?? "Example song",
+                                        artist: snapshot.artist ?? "Example artist",
+                                        duration: snapshot.duration > 60 ? snapshot.duration : 214,
+                                        elapsed: 12,
+                                        rate: 1,
+                                        timestamp: Date().timeIntervalSince1970)
+        } else {
+            staged = JXAReader.Snapshot(app: "YouTube Music",
+                                        title: "Example song",
+                                        artist: "Example artist",
+                                        duration: 214,
+                                        elapsed: 12,
+                                        rate: 1,
+                                        timestamp: Date().timeIntervalSince1970)
+        }
+        received(staged)
+        uiAppeared()
         readerState = "reading reader.js"
         refreshSummary()
     }
@@ -167,23 +193,28 @@ final class AppModel: ObservableObject {
             lastTrackSeenAt = Date()
         }
         watcher.tick(snapshot)
-        if panelVisible { publishNowPlaying() }
+        if visibleSurfaces > 0 { publishNowPlaying() }
     }
 
     private func publishNowPlaying() {
         nowPlaying.update(with: latest, settings: .current)
     }
 
-    /// The panel says when it is on screen, so the 10 Hz values are only mirrored
-    /// into the observable store while someone can see them.
-    func panelAppeared() {
-        panelVisible = true
+    /// Called by the menu bar panel and the main window. The 10 Hz values are
+    /// only mirrored into the observable store while a surface can show them.
+    func uiAppeared() {
+        visibleSurfaces += 1
+        guard visibleSurfaces == 1 else { return }
         publishNowPlaying()
     }
 
-    func panelDisappeared() {
-        panelVisible = false
+    func uiDisappeared() {
+        visibleSurfaces = max(0, visibleSurfaces - 1)
     }
+
+    /// Names used by the menu bar panel.
+    func panelAppeared() { uiAppeared() }
+    func panelDisappeared() { uiDisappeared() }
 
     // MARK: - Actions
 
@@ -212,8 +243,58 @@ final class AppModel: ObservableObject {
         ignoredPlayers = players
     }
 
+    /// Re-reads the players the reader has seen, so a player that spoke up while
+    /// a surface was closed still appears in the list.
+    func refreshPlayers() {
+        seenPlayers = Prefs.seenPlayers
+    }
+
     func revealLog() {
+        try? FileManager.default.createDirectory(at: AppLog.url.deletingLastPathComponent(),
+                                                 withIntermediateDirectories: true)
         NSWorkspace.shared.activateFileViewerSelecting([AppLog.url])
+    }
+
+    func openLog() {
+        try? FileManager.default.createDirectory(at: AppLog.url.deletingLastPathComponent(),
+                                                 withIntermediateDirectories: true)
+        NSWorkspace.shared.open(AppLog.url)
+    }
+
+    /// Copies a support-friendly report to the pasteboard. No audio, and no
+    /// track titles beyond what is already on screen.
+    func copyDiagnosticReport() {
+        var lines = [
+            "Midtrack \(appVersion) (\(appBuild))",
+            "macOS \(ProcessInfo.processInfo.operatingSystemVersionString)",
+            "Seeking: \(enabled ? "on" : "off")",
+            "Rule: \(SeekLogic.describe(.current))\(Prefs.settings.guardrailSummary)",
+            "Ignoring: \(ignoredPlayers.isEmpty ? "nobody" : ignoredPlayers.sorted().joined(separator: ", "))",
+            "Seen players: \(seenPlayers.isEmpty ? "none yet" : seenPlayers.joined(separator: ", "))",
+            "Reader: \(readerState)",
+            "Seek API: \(MediaRemote.isAvailable ? "available" : "unavailable")",
+            "Log: \(AppLog.url.path)",
+        ]
+        if let activePlayer {
+            lines.append("Active player: \(activePlayer)")
+        }
+        if !statusText.isEmpty {
+            lines.append("Status: \(statusText)")
+        }
+        if !infoLines.isEmpty {
+            lines.append("")
+            lines.append(contentsOf: infoLines)
+        }
+        if let errorMessage {
+            lines.append("")
+            lines.append("Error: \(errorMessage)")
+        }
+        if let hintMessage {
+            lines.append("Hint: \(hintMessage)")
+        }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(lines.joined(separator: "\n"), forType: .string)
     }
 
     func quit() {

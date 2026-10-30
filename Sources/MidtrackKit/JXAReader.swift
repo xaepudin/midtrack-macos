@@ -40,14 +40,21 @@ public final class JXAReader {
     }
 
     /// Where `reader.js` lives: inside the app bundle when running as a bundled
-    /// app, otherwise next to the sources (so `swift run` works while developing).
+    /// app, otherwise at the repository root (so `swift run` works while
+    /// developing). `#filePath` keeps the fallback working wherever the checkout
+    /// lives, which matters now that the folder is no longer named after the app.
     public static func defaultScriptURL() -> URL {
         if let resources = Bundle.main.resourceURL {
             let bundled = resources.appendingPathComponent("reader.js")
             if FileManager.default.fileExists(atPath: bundled.path) { return bundled }
         }
-        return URL(fileURLWithPath: NSHomeDirectory())
-            .appendingPathComponent("ytm-radio-seek-macos/reader.js")
+        let sourceRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("reader.js")
+        if FileManager.default.fileExists(atPath: sourceRoot.path) { return sourceRoot }
+        return URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("midtrack/reader.js")
     }
 
     /// Parses one JSON line from the reader. Exposed for the `--check` report.

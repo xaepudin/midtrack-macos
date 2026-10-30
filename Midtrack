@@ -1,0 +1,3 @@
+#!/bin/bash
+# Launcher: the app lives in dist/Midtrack.app.
+exec "$(cd "$(dirname "$0")" && pwd)/dist/Midtrack.app/Contents/MacOS/Midtrack" "$@"

@@ -2,16 +2,16 @@
 import PackageDescription
 
 let package = Package(
-    name: "SongSeeker",
+    name: "Midtrack",
     platforms: [.macOS(.v15)],
     products: [
-        .library(name: "SongSeekerKit", targets: ["SongSeekerKit"]),
-        .executable(name: "SongSeeker", targets: ["SongSeeker"]),
+        .library(name: "MidtrackKit", targets: ["MidtrackKit"]),
+        .executable(name: "Midtrack", targets: ["Midtrack"]),
     ],
     targets: [
-        .target(name: "SongSeekerKit"),
-        .executableTarget(name: "SongSeeker", dependencies: ["SongSeekerKit"]),
-        .testTarget(name: "SongSeekerKitTests", dependencies: ["SongSeekerKit"]),
+        .target(name: "MidtrackKit"),
+        .executableTarget(name: "Midtrack", dependencies: ["MidtrackKit"]),
+        .testTarget(name: "MidtrackKitTests", dependencies: ["MidtrackKit"]),
     ],
     // The reader watches a child process and hands snapshots to the main thread by
     // hand; Swift 5 language mode keeps the concurrency checker out of the way

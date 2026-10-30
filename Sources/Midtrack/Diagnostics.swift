@@ -1,67 +1,125 @@
 import AppKit
 import Foundation
-import SongSeekerKit
+import MidtrackKit
 import SwiftUI
 
-/// `SongSeeker --check` exercises the pieces the panel depends on and exits, so
-/// the app can be verified without hijacking playback. Same idea as IRSVerb's
-/// `--diagnose`.
+/// `Midtrack --check` exercises the pieces the panel depends on and exits, so
+/// the app can be verified without hijacking playback. The render modes turn
+/// SwiftUI surfaces into PNGs for documentation and layout review.
 enum Diagnostics {
     static func runIfRequested() {
         if let path = value(for: "--render-panel") {
-            MainActor.assumeIsolated { render(panelTo: URL(fileURLWithPath: path)) }
+            MainActor.assumeIsolated { renderPanel(to: URL(fileURLWithPath: path)) }
+            exit(0)
+        }
+        if let path = value(for: "--render-window") {
+            MainActor.assumeIsolated { renderWindow(to: URL(fileURLWithPath: path)) }
+            exit(0)
+        }
+        if let path = value(for: "--render-onboarding") {
+            MainActor.assumeIsolated { renderOnboarding(to: URL(fileURLWithPath: path)) }
             exit(0)
         }
         guard CommandLine.arguments.contains("--check") else { return }
+        Prefs.migrateLegacySettingsIfNeeded()
         let report = report()
         print(report.text)
         exit(report.passed ? 0 : 1)
     }
 
+    // MARK: - Renders
+
     /// `--render-panel <file.png>` photographs the menu bar panel. Handy for
     /// reviewing a layout change without hunting for the status item — which
     /// matters here, because menu bar managers (Ice, Bartender) routinely file
     /// new items away in their hidden section.
-    ///
-    /// The panel is hosted in a real off-screen window and captured with
-    /// `cacheDisplay`, so the sliders, segmented picker and switches are drawn by
-    /// AppKit itself instead of as placeholder glyphs.
     @MainActor
-    private static func render(panelTo url: URL) {
+    private static func renderPanel(to url: URL) {
+        let model = stagedModel()
+        let content = PanelView(model: model, nowPlaying: model.nowPlaying, status: model.status)
+            .background(Color(nsColor: .windowBackgroundColor))
+        let forcedHeight = value(for: "--height").flatMap(Double.init)
+        let root = forcedHeight.map { height in
+            AnyView(content.frame(width: 420, height: height, alignment: .top))
+        } ?? AnyView(content)
+        render(root: root,
+               size: CGSize(width: 420, height: forcedHeight ?? 640),
+               fitsHeight: forcedHeight == nil,
+               to: url)
+    }
+
+    /// `--render-window <file.png>` photographs the conventional window.
+    /// `--tab control|players|diagnostics|settings|about` chooses the sidebar
+    /// selection; `--appearance dark|light` pins the appearance for docs.
+    @MainActor
+    private static func renderWindow(to url: URL) {
+        let model = stagedModel()
+        let tab = value(for: "--tab").flatMap(MainTab.init(rawValue:)) ?? .control
+        let content = MainWindowView(model: model,
+                                     nowPlaying: model.nowPlaying,
+                                     status: model.status,
+                                     suppressWelcome: true,
+                                     initialTab: tab)
+        render(root: AnyView(content),
+               size: CGSize(width: 1120, height: 720),
+               fitsHeight: false,
+               to: url)
+    }
+
+    @MainActor
+    private static func stagedModel() -> AppModel {
+        Prefs.migrateLegacySettingsIfNeeded()
         let model = AppModel()
         let script = JXAReader.defaultScriptURL()
         let snapshot = FileManager.default.fileExists(atPath: script.path) ? firstSnapshot(script: script) : nil
         model.stageForPreview(snapshot: snapshot)
+        return model
+    }
 
-        // The real panel gets its background from the window's material; an
-        // off-screen window has none, so the render carries its own — otherwise
-        // the capture is a transparent PNG full of holes.
-        let content = PanelView(model: model, nowPlaying: model.nowPlaying, status: model.status)
-            .background(Color.white)
+    /// `--render-onboarding <file.png>` photographs the first-run sheet.
+    @MainActor
+    private static func renderOnboarding(to url: URL) {
+        let model = stagedModel()
+        let content = OnboardingView(model: model)
+            .background(Color(nsColor: .windowBackgroundColor))
+        render(root: AnyView(content),
+               size: CGSize(width: 600, height: 640),
+               fitsHeight: true,
+               to: url)
+    }
 
-        // `--height` squeezes the panel into a smaller window, which is what the
-        // real window does when it cannot be as tall as the content wants.
-        let forcedHeight = value(for: "--height").flatMap(Double.init)
-        let root = forcedHeight.map { height in
-            AnyView(content.frame(width: 380, height: height, alignment: .top))
-        } ?? AnyView(content)
+    /// Hosts a SwiftUI view in a real off-screen window and captures it with
+    /// `cacheDisplay`, so AppKit draws the sliders, pickers, and switches itself
+    /// instead of leaving placeholder glyphs.
+    @MainActor
+    private static func render(root: AnyView,
+                               size: CGSize,
+                               fitsHeight: Bool,
+                               to url: URL) {
         let host = NSHostingView(rootView: root)
-        host.frame = NSRect(x: 0, y: 0, width: 380, height: forcedHeight ?? 560)
+        host.frame = NSRect(origin: .zero, size: size)
         let window = NSWindow(contentRect: host.frame,
                               styleMask: [.borderless],
                               backing: .buffered,
                               defer: false)
         window.contentView = host
+        window.backgroundColor = .windowBackgroundColor
+        switch value(for: "--appearance") {
+        case "dark": window.appearance = NSAppearance(named: .darkAqua)
+        case "light": window.appearance = NSAppearance(named: .aqua)
+        default: break
+        }
         // Far off any display, so nothing flashes on screen while this runs.
         window.setFrameOrigin(NSPoint(x: -10_000, y: -10_000))
-        window.orderFrontRegardless()
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
         host.layoutSubtreeIfNeeded()
-        RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+        RunLoop.main.run(until: Date().addingTimeInterval(0.6))
 
-        if forcedHeight == nil {
+        if fitsHeight {
             let fitting = host.fittingSize
             if fitting.height > 100 {
-                host.frame = NSRect(x: 0, y: 0, width: 380, height: fitting.height)
+                host.frame = NSRect(x: 0, y: 0, width: size.width, height: fitting.height)
                 window.setContentSize(host.frame.size)
                 host.layoutSubtreeIfNeeded()
                 RunLoop.main.run(until: Date().addingTimeInterval(0.3))
@@ -69,12 +127,12 @@ enum Diagnostics {
         }
 
         guard let representation = host.bitmapImageRepForCachingDisplay(in: host.bounds) else {
-            print("could not render the panel")
+            print("could not render \(url.lastPathComponent)")
             return
         }
         host.cacheDisplay(in: host.bounds, to: representation)
         guard let png = representation.representation(using: .png, properties: [:]) else {
-            print("could not encode the panel")
+            print("could not encode \(url.lastPathComponent)")
             return
         }
         do {
@@ -85,6 +143,7 @@ enum Diagnostics {
         }
     }
 
+    // MARK: - Self-check
 
     private static func value(for flag: String) -> String? {
         let arguments = CommandLine.arguments
@@ -96,7 +155,7 @@ enum Diagnostics {
         let script = JXAReader.defaultScriptURL()
         let scriptExists = FileManager.default.fileExists(atPath: script.path)
         var lines = [
-            "Song Seeker self-check",
+            "Midtrack self-check",
             "  bundle          : \(Bundle.main.bundleIdentifier ?? "-") (\(Bundle.main.bundlePath))",
             "  reader script   : \(script.path)\(scriptExists ? " (found)" : " (MISSING)")",
             "  MediaRemote seek: \(MediaRemote.isAvailable ? "available" : "UNAVAILABLE")",
