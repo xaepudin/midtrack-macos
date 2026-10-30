@@ -64,7 +64,7 @@ Midtrack**.
 | **Jump now** | Applies the rule to the song **already playing** — the Android app's third notification button. It ignores the dedup and the min-length limit (an explicit “do it anyway”), but still refuses a track with no known length. Greyed out, with the reason, while paused or when nothing is playing |
 | **Time / Percent / Random** | How the jump target is chosen |
 | **Seconds / Percent into the song** | A fixed offset, or the fraction of every track |
-| **Random window** | One two-handle slider; drag either end to set where Random may land |
+| **Random window** | One two-handle slider; drag either handle, even past the other. The window is always the ordered range between them |
 | **Also seek on natural end** | Off = only seek tracks you skipped to; tracks that ended by themselves are left alone |
 | **Enable guardrails** | Main window only. Off by default. While off, Min length and Max jump are ignored and their sliders are locked; turning it on applies the values below |
 | **Min length** | Nothing shorter than this is jumped — an ad, a jingle, a 26-second X/Threads video. It keys on the *track's length*, not on which app is playing. Default 1:30. 0 turns this limit off |

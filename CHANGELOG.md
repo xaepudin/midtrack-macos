@@ -14,7 +14,8 @@ First Midtrack release: **Skip to the good part — automatically.**
 - An **Enable guardrails** switch, off by default. While off, Min length and Max
   jump are ignored and their sliders are locked; turning it on applies both.
 - A two-handle **Random window** slider for Random mode, replacing the separate
-  From and To sliders.
+  From and To sliders. The handles may cross one another; the window is always
+  the ordered range between them.
 - A diagnostics page with live status, log access, a copyable report, and the
   `--check` command.
 - A monochrome template version of the app mark for the menu bar, dimmed while
