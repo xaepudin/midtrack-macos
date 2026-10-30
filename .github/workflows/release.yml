@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify tag matches Info.plist
+        run: |
+          version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Resources/Info.plist)
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match CFBundleShortVersionString $version" >&2
+            exit 1
+          fi
+
+      - name: Tests
+        run: swift test --disable-sandbox
+
+      - name: Package
+        env:
+          MIDTRACK_NO_SWIFT_SANDBOX: "1"
+        run: ./scripts/package.sh
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Midtrack ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/release/Midtrack-*-macos.zip
+            dist/release/Midtrack-*.dmg
+            dist/release/SHA256SUMS.txt

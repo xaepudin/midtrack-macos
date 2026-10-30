@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main, midtrack]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: swift --version
+
+      - name: Tests
+        run: swift test --disable-sandbox
+
+      - name: Build app bundle
+        env:
+          MIDTRACK_NO_SWIFT_SANDBOX: "1"
+        run: ./build.sh
+
+      - name: Verify bundle
+        run: |
+          test -x dist/Midtrack.app/Contents/MacOS/Midtrack
+          test -f dist/Midtrack.app/Contents/Resources/reader.js
+          test -f dist/Midtrack.app/Contents/Resources/AppIcon.icns
+          plutil -lint dist/Midtrack.app/Contents/Info.plist
+          codesign --verify --deep --strict dist/Midtrack.app
+          bundle_id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" dist/Midtrack.app/Contents/Info.plist)
+          test "$bundle_id" = "com.xaepudin.midtrack"

@@ -1,275 +1,185 @@
-# Midtrack — macOS
+# Midtrack
+
+[![CI](https://github.com/xaepudin/midtrack-macos/actions/workflows/ci.yml/badge.svg)](https://github.com/xaepudin/midtrack-macos/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/xaepudin/midtrack-macos?display_name=tag)](https://github.com/xaepudin/midtrack-macos/releases/latest)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
 **Skip to the good part — automatically.**
 
-Midtrack watches the system Now Playing session on macOS — YouTube Music in a
-browser, Spotify, Apple Music, Cog, mpv, anything that publishes to Now Playing —
-and jumps each new track to the spot you choose: a fixed time, a percentage of
-the song, or a random point inside a window.
+Midtrack is a small macOS menu bar app for radio-style listening. It watches the
+system Now Playing session — YouTube Music in a browser, Spotify, Apple Music,
+Cog, mpv, or anything else that publishes to Now Playing — and jumps each new
+track to the spot you choose.
 
-It shares its shape with its sibling
-[Konvolusi](https://github.com/xaepudin/konvolusi): a conventional window with a
-sidebar, a compact menu bar panel that shares the same controls, a welcome sheet,
-diagnostics, and an app icon that says what the thing does.
+A quick menu bar panel and a full window for everything else:
 
 <p>
   <img src="docs/midtrack-window.png" width="62%" alt="The Midtrack main window">
   <img src="docs/midtrack-panel.png" width="30%" alt="The Midtrack menu bar panel">
 </p>
 
-<p>
-  <img src="docs/midtrack-onboarding.png" width="62%" alt="The Midtrack welcome sheet">
-</p>
+## Install
 
-## Quick start
+Midtrack requires **macOS 15 or later**.
 
-macOS 15 or later, with the Xcode command line tools (Swift 6 tooling).
+1. Download the latest `.dmg` from
+   [Releases](https://github.com/xaepudin/midtrack-macos/releases/latest).
+2. Open the disk image and drag **Midtrack** into **Applications**.
+3. Launch it. The first launch shows a short welcome sheet; afterwards Midtrack
+   lives in the menu bar and opens its main window at launch.
+
+The release is ad-hoc signed, not notarized — Midtrack uses a private macOS API
+and is not distributed through the App Store. If macOS blocks the first launch,
+right-click the app and choose **Open**, or run:
 
 ```bash
-./build.sh                     # builds dist/Midtrack.app
-open dist/Midtrack.app         # menu bar icon + main window
+xattr -dr com.apple.quarantine /Applications/Midtrack.app
 ```
 
-`./Midtrack` is a stable launcher for a Login Item. The first launch explains the
-menu bar icon and the private seek API; after that the main window opens at
-launch and the menu bar icon stays put. Closing the window removes Midtrack from
-the Dock and ⌘-Tab but leaves it watching in the menu bar. Quit it from the menu
-bar panel.
+To start Midtrack automatically, add it in **System Settings › General › Login
+Items** (choose `Applications/Midtrack.app`, not the source launcher).
 
-The **first track is only a baseline** — Midtrack never yanks the song that was
-already playing when it started. From the next track on, every new track gets its
-jump.
+## First launch
 
-## The window
+The menu bar shows the Midtrack waveform mark. The first track it sees is only a
+**baseline** and is never jumped. From the next track on, every new track gets
+its jump.
 
-| Sidebar | What lives there |
+Closing the main window removes Midtrack from the Dock and ⌘-Tab but keeps it
+watching in the menu bar. Use **Quit Midtrack** in the menu bar panel to exit.
+
+## Using Midtrack
+
+### The menu bar panel
+
+Click the waveform icon. The panel shows:
+
+- **Status and pause** — the master switch. Pausing still tracks track changes,
+  so starting again mid-song never yanks the track that is playing.
+- **Now playing** — title, artist, player, position, and the next jump target.
+- **Jump now** — applies the rule to the song already playing. It is disabled
+  while paused or when nothing is playing.
+- **Jump target** — Time, Percent, or Random.
+- **Random window** — one two-handle slider. Drag either handle; the handles may
+  cross, and the window is always the range between them.
+- **Also seek on natural end** — off means only tracks you skipped to are
+  jumped; tracks that ended by themselves are left alone.
+- **Players to ignore** — always visible. Ticked players are excluded; see below.
+- **Open Midtrack** and **Quit Midtrack**.
+
+Guardrails and Settings live in the main window, not the panel.
+
+### The main window
+
+| Tab | What it is for |
 | --- | --- |
-| **Control** | Status, now playing, jump target, guardrails, and rules in force |
-| **Players** | Every player seen holding the Now Playing session, with an ignore tick for each |
-| **Diagnostics** | Live status lines, the log, and the `--check` command |
-| **Settings** | What closing the window means, the welcome sheet, log access, version |
-| **About** | The icon, version, and what Midtrack is (and is not) |
+| **Control** | Status, now playing, jump target, guardrails, and the active rule |
+| **Players** | Every player seen holding Now Playing, with its ignore tick |
+| **Diagnostics** | Live status, the log, a copyable report, and the `--check` command |
+| **Settings** | Window behaviour, the welcome sheet, log access, version |
+| **About** | Version, repository, issue tracker, and licence |
 
-The Control tab is deliberately the same surface as the menu bar panel, just
-roomier. The panel keeps the quick controls — status, now playing, jump target,
-and the always-visible **Players to ignore** list. Guardrails and Settings live
-in the main window; the panel footer has only **Open Midtrack** and **Quit
-Midtrack**.
+The Control tab is the same surface as the menu bar panel, with Guardrails added.
 
-### Controls
+### Choosing where to jump
 
-| Control | What it does |
-| --- | --- |
-| **Running / Paused** + **Pause / Start** | Master switch. Paused still tracks track changes, so starting again mid-song never yanks the track that is playing |
-| **Jump now** | Applies the rule to the song **already playing** — the Android app's third notification button. It ignores the dedup and the min-length limit (an explicit “do it anyway”), but still refuses a track with no known length. Greyed out, with the reason, while paused or when nothing is playing |
-| **Time / Percent / Random** | How the jump target is chosen |
-| **Seconds / Percent into the song** | A fixed offset, or the fraction of every track |
-| **Random window** | One two-handle slider; drag either handle, even past the other. The window is always the ordered range between them |
-| **Also seek on natural end** | Off = only seek tracks you skipped to; tracks that ended by themselves are left alone |
-| **Enable guardrails** | Main window only. Off by default. While off, Min length and Max jump are ignored and their sliders are locked; turning it on applies the values below |
-| **Min length** | Nothing shorter than this is jumped — an ad, a jingle, a 26-second X/Threads video. It keys on the *track's length*, not on which app is playing. Default 1:30. 0 turns this limit off |
-| **Max jump** | Never jump past this percent, so a long jump cannot land in the outro. Default 80%. 0 turns this limit off |
-| **Pos** meter | Green = how far in, orange tick = where the next jump lands (a shaded band in Random mode) |
-| **Status** line | The watcher's narration: baseline, track change, `SEEK … → 1:41`, or *why* it skipped |
-| **Players to ignore** | Ticked = ignored, unticked = jumped. Ticked players are never jumped, and their sessions never become the baseline |
+- **Time** — a fixed offset, e.g. always jump to 1:30.
+- **Percent** — a fraction of every track, e.g. always jump to 20%.
+- **Random** — a fresh spot inside a window for every track. Drag either end of
+  the two-handle slider; the handles may cross and the window is always read as
+  the ordered range between them.
 
-Settings persist in `~/Library/Preferences/com.xaepudin.midtrack.plist`.
+**Guardrails** are off by default and live in the main window. Turn on
+**Enable guardrails** to apply:
 
-### Players to ignore
+- **Min length** — skip short items such as ads, jingles, or 26-second videos.
+- **Max jump** — never land past a percentage of the track, so a long jump
+  cannot drop you into the outro.
 
-The list is a **deny-list**, not an allow-list. Ticking a player does not select
-it for jumping — it excludes it:
+While guardrails are off, both sliders are locked and ignored. A track with no
+known length — a live stream, an ad, or a video with no duration — is never
+jumped either way.
+
+## Players to ignore
+
+This list is a **deny-list**, not an allow-list. Ticking a player excludes it:
 
 - **Ticked = ignored.** Midtrack never jumps a track published by that player,
-  and that player's session is kept out of the baseline. That second part is
-  what stops a browser tab or a video from making the song that is playing look
-  like a new track. **Jump now** refuses an ignored player too.
+  and that player's session never becomes the baseline. **Jump now** refuses an
+  ignored player too.
 - **Unticked = jumped normally.** The player can own the Now Playing session,
-  become the baseline, and get its new tracks jumped.
-- The player currently holding the session is marked **playing now**. Players
-  appear here after they have published a session at least once; **Refresh**
-  re-reads the list.
-- A session with no player name cannot be matched, so it is never ignored: an
-  unknown name must not be able to turn Midtrack into a silent no-op.
+  become the baseline, and have its new tracks jumped.
+- The player currently holding the session is marked **playing now**.
+- A player only appears after it has published a session at least once. Use
+  **Refresh** on the Players tab to re-read the list.
+- A session with no player name cannot be matched, so it is never ignored.
 
 ![The Players to ignore tab](docs/midtrack-players.png)
 
-## How it works
+## Good to know
 
-```
-reader.js ──▶ osascript child ──▶ snapshots ──▶ Watcher ──▶ MRMediaRemoteSetElapsedTime
- (JXA)          (Apple-signed)       10 Hz        rules                (private API)
-```
+- **The first track is a baseline.** Midtrack never jumps the song that was
+  already playing when it started or when you enabled it.
+- **The same track is not jumped twice within 30 seconds.** Replaying a song
+  later still gets its jump.
+- **Two players can share the session.** When a browser tab takes Now Playing
+  and gives it back, the ignore list and the position guard keep the song from
+  being jumped a second time.
+- **Chrome can freeze its media updates** while a tab is heavily backgrounded.
+  Midtrack keeps the last known state and catches up when Chrome resumes.
+- **Midtrack does not capture audio.** It reads now-playing metadata and writes
+  a playback position; it does not record, play, or analyse sound.
 
-- **Read:** a persistent `osascript` child runs `reader.js` (JXA). On macOS 26
-  the MediaRemote *read* is gated to Apple-signed processes — a normal binary
-  gets nil, but osascript works. The child prints a line on every MediaRemote
-  change notification plus a 0.1 s fallback poll, so seek latency is the player's
-  own publication time, not our poll interval.
-- **Seek:** `MRMediaRemoteSetElapsedTime()` via `dlopen` — the same private
-  function the system Now Playing widget uses.
-- Same rules as the Android app: baseline the track playing at startup, wait for
-  a length before jumping, never land on the very end, per-track dedup,
-  auto-next option, and optional min-length / max-jump limits.
+## Troubleshooting
 
-The UI is split so the 10 Hz values cannot invalidate the menu bar scene: they
-live in `NowPlayingStore`, and are only mirrored while the panel or the main
-window is on screen. The `MenuBarExtra` label observes only `StatusStore`.
+- **The menu bar icon is missing.** Menu bar managers such as Ice or Bartender
+  may file new items under *Hidden*. Drag the Midtrack mark into *Visible* in
+  their layout editor.
+- **Nothing is playing / no jump.** Start playback in any player, then check the
+  panel's status line. The Diagnostics tab shows the reader state.
+- **It says “guardrails off”.** That is the default. Turn guardrails on in the
+  main window's Control tab if you want the limits.
+- **The song is shorter than the minimum.** With guardrails on, short clips are
+  skipped deliberately.
+- **The app is blocked by macOS.** See the Gatekeeper step under Install.
+- **Something else.** Open **Diagnostics › Copy Report** and attach it to an
+  issue at <https://github.com/xaepudin/midtrack-macos/issues>. The log lives at
+  `~/Library/Logs/Midtrack/app.log`.
 
-## Why a song used to get jumped twice
+More detail: [docs/diagnostics.md](docs/diagnostics.md).
 
-Two players can hold the Now Playing session, and on macOS they hand it back and
-forth: YouTube Music plays, a browser tab starts a video, the session moves to
-Chrome, the video ends and the session returns to the music. Every hand-back made
-the song look like a **brand new track**, and the dedup only remembered the single
-most recent jump — which the intervening video had overwritten:
+## Privacy
 
-```
-[09:09:38] SEEK Sinikini - Dan Senyumlah (VC) → 0:57 (dur 286s, was 119s) [YouTube Music]
-```
+Midtrack has no account, no network code, and no telemetry. It reads the system
+Now Playing session through `osascript` and writes the new position through
+Apple's private `MediaRemote` API. Audio never leaves the Mac. Settings and logs
+stay on the machine.
 
-Midtrack's watcher handles that with three rules:
+## Uninstall
 
-1. **The ignore list** (the structural fix). A session from a ticked player is
-   ignored outright and never becomes the baseline, so when the song's session
-   comes back its key is unchanged and no track change — and no jump — is even
-   considered. Tick `Google Chrome` in **Players** and the X/Threads tabs stop
-   existing here.
-2. **A position is only evidence if it belongs to the new track.** The watcher
-   compares the position with the one from before the change — a number that has
-   not moved is the previous track's and cannot veto the jump. This is what
-   refuses the 62-second pull-back above even with no ignore list set.
-3. **A same-title re-post right after the baseline is absorbed** — Android's 3 s
-   window. The reader's first line for a track can arrive before the artist (or a
-   corrected length) does, and the next line looked like a brand-new track: a jump
-   a fifth of a second after launch.
+1. Quit Midtrack from the menu bar panel.
+2. Delete `Applications/Midtrack.app`.
+3. Optionally remove `~/Library/Preferences/com.xaepudin.midtrack.plist` and
+   `~/Library/Logs/Midtrack/`.
 
-**Turn on guardrails** if you want Midtrack to refuse short items in the first
-place — saying so in the status line instead of jumping into a 26-second video.
+## License
 
-What is deliberately *not* here is a memory of every track ever jumped to. The
-only dedup is the original per-track one — the same track is not jumped twice
-within 30 seconds — so replaying a song later still gets its jump.
+Midtrack is free software, licensed under **GPL-3.0-only**. See [LICENSE](LICENSE).
 
-All three shapes are covered by tests: the ignored player
-(`testAnIgnoredPlayerNeverDisturbsTheBaseline`), the song that was jumped before
-(`testAVideoStealingTheSessionDoesNotJumpTheSongAgain`) and the one that was the
-baseline and is now mid-track
-(`testAReturningBaselineSongIsNotYankedBackwards`).
+Copyright © 2026 Asep Saepudin.
 
-## Command line
+The app is an independent project. It uses the private `MediaRemote` framework
+and is not affiliated with Apple, Google, YouTube, Spotify, or any player vendor.
 
-```bash
-swift test --disable-sandbox                            # run the 48 tests
-dist/Midtrack.app/Contents/MacOS/Midtrack --check       # self-check, then exit
-dist/Midtrack.app/Contents/MacOS/Midtrack --render-window window.png
-dist/Midtrack.app/Contents/MacOS/Midtrack --render-window players.png --tab players
-dist/Midtrack.app/Contents/MacOS/Midtrack --render-panel panel.png
-dist/Midtrack.app/Contents/MacOS/Midtrack --render-panel squeezed.png --height 600
-dist/Midtrack.app/Contents/MacOS/Midtrack --render-onboarding welcome.png
-dist/Midtrack.app/Contents/MacOS/Midtrack --render-menubar-icon glyph.png
-```
+## Development
 
-`--check` reports the bundle, the reader script it resolved, whether the private
-seek symbol is available, the rule and guardrails in force, and one live
-now-playing snapshot:
+The end-user README stays here; build instructions, architecture, diagnostics,
+and release notes live in [docs/](docs/README.md).
 
-```
-Midtrack self-check
-  bundle          : com.xaepudin.midtrack (…/dist/Midtrack.app)
-  reader script   : …/Contents/Resources/reader.js (found)
-  MediaRemote seek: available
-  settings        : on · Random · jump somewhere between 15% and 60% · guardrails off · auto-next on
-  ignoring        : IINA, mpv
-  seen players    : Google Chrome, YouTube Music, mpv, IINA, Cog
-  log             : /Users/asep/Library/Logs/Midtrack/app.log
-  now playing     : Google Chrome · Instagram (0:00 / 1:00, rate 1.0)
-RESULT: PASS — the seek API is reachable and reader.js is producing snapshots.
-```
+- [Building and testing](docs/building.md)
+- [Architecture and watcher rules](docs/architecture.md)
+- [Diagnostics](docs/diagnostics.md)
+- [Release pipeline](docs/release.md)
+- [Changelog](CHANGELOG.md)
 
-The render modes photograph the real SwiftUI surfaces off-screen with AppKit
-controls, so a layout change can be reviewed without hunting for the status item.
-`--appearance dark|light` pins the appearance for documentation; `--tab` picks a
-sidebar tab. `--height` squeezes the panel into a shorter window on purpose: a
-`MenuBarExtra` window is capped in height, and anything flexible inside the panel
-is squeezed rather than scrolled. The off-screen window does not get the real
-menu bar material, so a slider's fill and a switch's tint may come out muted;
-`--check` is the place to read their actual values.
-
-## Layout
-
-```
-Sources/MidtrackKit/        settings, seek maths + guardrails, reader, watcher  (no UI)
-Sources/Midtrack/           MidtrackApp, AppModel, MainWindowView, ControlViews,
-                            MenuBarIcon, PanelView, OnboardingView, SettingsView,
-                            Diagnostics
-Tests/MidtrackKitTests/     48 tests: seek maths, guardrails, ignore list,
-                            every watcher decision
-Resources/Info.plist        LSUIElement bundle (Dock icon only while a window is open)
-Resources/AppIcon.icns      generated by scripts/make-icon.py
-reader.js                   the JXA reader, copied into the bundle by build.sh
-scripts/make-icon.py        draws the waveform-at-midpoint app icon
-```
-
-## Energy
-
-The reader pushes ~10 Hz values, so those live in `NowPlayingStore` that only the
-status rows observe; the `MenuBarExtra` scene itself observes only the
-rarely-changing `StatusStore` and `AppModel`. Konvolusi measured the opposite
-arrangement — fast values published through the object the scene observes — at
-~12% of a CPU core while idle with the panel closed. The panel and window also
-mirror the fast values only while a surface is on screen (`uiAppeared` /
-`uiDisappeared`), and the 1 Hz health timer only touches `hintMessage` when the
-message changes.
-
-## Identity
-
-- Bundle identifier **`com.xaepudin.midtrack`**, executable **`Midtrack`**, app
-  **`dist/Midtrack.app`**, launcher **`./Midtrack`**.
-- Preferences live in `com.xaepudin.midtrack`, logs in
-  `~/Library/Logs/Midtrack/app.log`. The first launch after the identifier
-  change copies the previous `com.asep.midtrack` defaults once.
-- The app icon is drawn by `scripts/make-icon.py`: a teal waveform bisected by an
-  orange midpoint marker. The menu bar uses the same mark as a monochrome
-  template image, dimmed while paused.
-
-  <img src="docs/menubar-icon.png" width="96" alt="The monochrome menu bar mark">
-
-## Caveats (honest)
-
-- **Private API** (`MediaRemote`) — no App Store, may need a tweak on future
-  macOS releases. The read-side quirk (Apple-signed only) is why the JXA child
-  exists; if Apple ever opens a public observer API, `JXAReader` can be swapped
-  for it.
-- **Menu bar managers hide new items.** Ice (and Bartender) file a newly seen
-  status item into their *Hidden* section; drag the Midtrack icon into *Visible* in
-  their layout editor, or use their hidden-items chevron.
-- Chrome freezes its media-session updates when the tab is heavily backgrounded;
-  the reader stays on the last known state and catches the next change when the
-  session resumes.
-- `build.sh` needs a plain Terminal. SwiftPM wraps manifest compilation in its
-  own `sandbox-exec`, which a nested sandbox refuses, so from inside another
-  sandbox run `MIDTRACK_NO_SWIFT_SANDBOX=1 ./build.sh`.
-
----
-
-## Bahasa Indonesia
-
-**Midtrack** adalah aplikasi macOS yang memantau sesi Now Playing dan
-melompatkan setiap lagu baru ke posisi pilihanmu — waktu tetap, persen, atau
-acak. Tampilannya mengikuti aplikasi **Konvolusi**: jendela utama dengan
-sidebar, panel ringkas di menu bar, layar sambutan, dan halaman diagnosa.
-
-```bash
-./build.sh                 # bikin dist/Midtrack.app
-open dist/Midtrack.app     # ikon menu bar + jendela utama
-./Midtrack                 # launcher untuk Login Item
-```
-
-Lagu pertama hanya dijadikan *baseline* dan tidak pernah dilompatkan. Setelah
-itu, lagu baru akan di-seek sesuai aturan. **Players** menyimpan daftar pemutar
-yang tidak pernah disentuh (centang `Google Chrome` agar video di tab browser
-tidak mengganggu lagu). **Guardrails** mati secara default; nyalakan untuk
-mengaktifkan batas Min length dan Max jump. Log ada di
-`~/Library/Logs/Midtrack/app.log`. Jump memakai API privat `MediaRemote`, jadi
-aplikasi ini untuk pemakaian pribadi, bukan App Store.
+Repository: <https://github.com/xaepudin/midtrack-macos>

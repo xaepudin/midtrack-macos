@@ -24,6 +24,9 @@ First Midtrack release: **Skip to the good part — automatically.**
   `--render-menubar-icon`, and `--tab` for reviewing layouts off-screen.
 - A generated app icon (`scripts/make-icon.py`): a teal waveform bisected by an
   orange midpoint marker.
+- GPL-3.0-only licensing, an end-user README, technical documentation under
+  `docs/`, and GitHub Actions CI plus a tag-driven release workflow with ZIP,
+  DMG, and checksums.
 
 ### Changed
 - Rebuilt the panel and controls in the visual language of Konvolusi: card

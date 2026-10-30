@@ -71,8 +71,8 @@ struct SettingsView: View {
 
             Section("About") {
                 LabeledContent("Version", value: "\(model.appVersion) (\(model.appBuild))")
-                Text("Midtrack is a personal macOS utility. It uses the private MediaRemote API to "
-                    + "jump playback, so it is not distributed on the App Store.")
+                Text("Midtrack is free software under GPL-3.0. It uses the private MediaRemote "
+                    + "API to jump playback, so it is not distributed on the App Store.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

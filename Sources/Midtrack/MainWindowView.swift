@@ -358,7 +358,15 @@ struct AboutView: View {
                 .frame(maxWidth: 460)
                 .padding(.top, 4)
 
-            Text("Jumping uses MediaRemote, a private macOS API. Personal use; not for the App Store.")
+            HStack(spacing: 16) {
+                Link("Repository", destination: URL(string: "https://github.com/xaepudin/midtrack-macos")!)
+                Link("Report an issue", destination: URL(string: "https://github.com/xaepudin/midtrack-macos/issues")!)
+                Link("GPL-3.0 license", destination: URL(string: "https://www.gnu.org/licenses/gpl-3.0.html")!)
+            }
+            .font(.callout)
+
+            Text("Jumping uses MediaRemote, a private macOS API. Not for the App Store. "
+                + "Midtrack is free software under GPL-3.0.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
