@@ -40,10 +40,6 @@ struct MidtrackApp: App {
         // must run before the menu bar UI (and the reader it starts) exists.
         Diagnostics.runIfRequested()
 
-        // Move Song Seeker preferences into Midtrack's domain before AppModel
-        // reads them.
-        Prefs.migrateLegacySettingsIfNeeded()
-
         let model = AppModel()
         _model = StateObject(wrappedValue: model)
 
@@ -106,8 +102,12 @@ private struct MenuBarLabel: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        // Filled while jumping is on, outline while it is paused.
-        Image(systemName: status.enabled ? "forward.end.circle.fill" : "forward.end.circle")
+        // The same mark as the app icon, as a template image so the menu bar
+        // tints it for light and dark. Paused dims it rather than switching to
+        // a different symbol.
+        Image(nsImage: MenuBarIcon.image)
+            .renderingMode(.template)
+            .opacity(status.enabled ? 1 : 0.45)
             .accessibilityLabel("Midtrack")
             .accessibilityValue(status.enabled ? "Running" : "Paused")
             .accessibilityHint("Opens the Midtrack controls")

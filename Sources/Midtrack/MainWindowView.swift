@@ -17,17 +17,26 @@ struct MainWindowView: View {
 
     @AppStorage(PreferenceKey.hasCompletedOnboarding) private var hasCompletedOnboarding = false
     @AppStorage("MainTab") private var tabRaw = MainTab.control.rawValue
+    @State private var tabOverride: MainTab?
     @State private var showWelcome = false
     @State private var isSurfaceVisible = false
 
     private var selectedTab: MainTab {
-        MainTab(rawValue: tabRaw) ?? .control
+        tabOverride ?? MainTab(rawValue: tabRaw) ?? .control
     }
 
     private var tabSelection: Binding<MainTab> {
         Binding(
             get: { selectedTab },
-            set: { tabRaw = $0.rawValue }
+            set: { newValue in
+                // A render's `initialTab` is a preview only; never write it into
+                // the user's real MainTab preference.
+                if tabOverride != nil {
+                    tabOverride = newValue
+                } else {
+                    tabRaw = newValue.rawValue
+                }
+            }
         )
     }
 
@@ -42,7 +51,7 @@ struct MainWindowView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .frame(minWidth: 980, minHeight: 640)
         .onAppear {
-            if let initialTab { tabRaw = initialTab.rawValue }
+            if let initialTab, tabOverride == nil { tabOverride = initialTab }
             if !isSurfaceVisible {
                 isSurfaceVisible = true
                 DockVisibility.showForWindow()
@@ -324,15 +333,15 @@ struct AboutView: View {
                 .accessibilityHidden(true)
             Text("Midtrack")
                 .font(.largeTitle.bold())
-            Text("Every song, from the good part.")
+            Text("Skip to the good part — automatically.")
                 .font(.title3)
                 .foregroundStyle(.secondary)
             Text("Version \(version) (\(build))")
                 .font(.callout)
                 .foregroundStyle(.secondary)
 
-            Text("Midtrack is the macOS app formerly called Song Seeker. It watches the system "
-                + "Now Playing session and jumps each new track to the spot you chose.")
+            Text("Midtrack watches the system Now Playing session and jumps each new track to "
+                + "the spot you chose.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

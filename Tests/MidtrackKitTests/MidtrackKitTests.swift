@@ -21,13 +21,14 @@ final class SeekLogicTests: XCTestCase {
         super.tearDown()
     }
 
-    /// Guardrails off unless a test asks for them, so the mode maths is what is
-    /// under test.
+    /// The guardrail toggle is on for the explicit-limit tests; 0 still means a
+    /// limit is off, so the mode maths stays the focus.
     private func settings(mode: Prefs.Mode,
                           absoluteSeconds: Int = 120,
                           relativePercent: Int = 20,
                           randomMin: Int = 15,
                           randomMax: Int = 60,
+                          guardrailsEnabled: Bool = true,
                           minDurationSeconds: Int = 0,
                           maxTargetPercent: Int = 0) -> SeekSettings {
         SeekSettings(mode: mode,
@@ -35,6 +36,7 @@ final class SeekLogicTests: XCTestCase {
                      relativePercent: relativePercent,
                      randomMin: randomMin,
                      randomMax: randomMax,
+                     guardrailsEnabled: guardrailsEnabled,
                      minDurationSeconds: minDurationSeconds,
                      maxTargetPercent: maxTargetPercent)
     }
@@ -134,6 +136,19 @@ final class SeekLogicTests: XCTestCase {
             .guardrailSummary, " · >1:30, ≤80%")
     }
 
+    func testDisabledGuardrailsAllowShortClipsAndLateJumps() {
+        let rule = settings(mode: .relative,
+                            relativePercent: 90,
+                            guardrailsEnabled: false,
+                            minDurationSeconds: 90,
+                            maxTargetPercent: 25)
+
+        XCTAssertNil(SeekLogic.skipReason(duration: 26, settings: rule))
+        XCTAssertEqual(SeekLogic.computeTarget(duration: 26, settings: rule)!, 23.4, accuracy: 0.001)
+        XCTAssertEqual(SeekLogic.computeTarget(duration: 200, settings: rule)!, 180, accuracy: 0.001)
+        XCTAssertEqual(rule.guardrailSummary, " · guardrails off")
+    }
+
     // MARK: - Preferences
 
     func testPreferencesAreClampedOnWriteAndRead() {
@@ -160,6 +175,7 @@ final class SeekLogicTests: XCTestCase {
         XCTAssertEqual(Prefs.randomMin, 15)
         XCTAssertEqual(Prefs.randomMax, 60)
         XCTAssertTrue(Prefs.seekOnAutoNext)
+        XCTAssertFalse(Prefs.guardrailsEnabled)
         XCTAssertEqual(Prefs.minDurationSeconds, 90)
         XCTAssertEqual(Prefs.maxTargetPercent, 80)
     }
@@ -210,6 +226,7 @@ final class SeekLogicTests: XCTestCase {
         settings.mode = .random
         settings.randomMin = 10
         settings.randomMax = 40
+        settings.guardrailsEnabled = true
         settings.minDurationSeconds = 120
         settings.maxTargetPercent = 60
         settings.seekOnAutoNext = false
@@ -232,7 +249,8 @@ final class WatcherTests: XCTestCase {
         Prefs.relativePercent = 20
         Prefs.seekOnAutoNext = true
         // The guardrails have their own tests; the watcher tests exercise the
-        // decision rules around them.
+        // decision rules around them, with the limits themselves disabled.
+        Prefs.guardrailsEnabled = true
         Prefs.minDurationSeconds = 0
         Prefs.maxTargetPercent = 0
 
@@ -561,59 +579,5 @@ final class WatcherTests: XCTestCase {
         watcher.tick(snap("B", 200, 0))
         XCTAssertEqual(Prefs.lastJumpTitle, "B")
         XCTAssertEqual(Prefs.lastJumpAt, 40, accuracy: 0.0001)
-    }
-}
-
-final class PreferencesMigrationTests: XCTestCase {
-    private let legacySuite = "MidtrackKitTests.Legacy"
-
-    override func setUp() {
-        super.setUp()
-        resetPreferences()
-        UserDefaults(suiteName: legacySuite)?.removePersistentDomain(forName: legacySuite)
-    }
-
-    override func tearDown() {
-        Prefs.store.removePersistentDomain(forName: testSuite)
-        UserDefaults(suiteName: legacySuite)?.removePersistentDomain(forName: legacySuite)
-        super.tearDown()
-    }
-
-    func testLegacySettingsAreCopiedOnce() {
-        let legacy = UserDefaults(suiteName: legacySuite)!
-        legacy.set(false, forKey: "enabled")
-        legacy.set(42, forKey: "relativePercent")
-        legacy.set(["Google Chrome"], forKey: "ignoredPlayers")
-
-        Prefs.migrateLegacySettings(from: [legacySuite], marker: "testMigration")
-
-        XCTAssertFalse(Prefs.enabled)
-        XCTAssertEqual(Prefs.relativePercent, 42)
-        XCTAssertEqual(Prefs.ignoredPlayers, ["Google Chrome"])
-
-        // A later change is not undone by the migration running again.
-        Prefs.relativePercent = 20
-        Prefs.migrateLegacySettings(from: [legacySuite], marker: "testMigration")
-        XCTAssertEqual(Prefs.relativePercent, 20)
-    }
-
-    func testAnExistingMidtrackDomainIsNotOverwritten() {
-        Prefs.enabled = true
-        Prefs.relativePercent = 33
-
-        let legacy = UserDefaults(suiteName: legacySuite)!
-        legacy.set(false, forKey: "enabled")
-        legacy.set(42, forKey: "relativePercent")
-
-        Prefs.migrateLegacySettings(from: [legacySuite], marker: "anotherMigration")
-
-        XCTAssertTrue(Prefs.enabled)
-        XCTAssertEqual(Prefs.relativePercent, 33)
-    }
-
-    func testMissingLegacyDomainLeavesDefaults() {
-        Prefs.migrateLegacySettings(from: ["MidtrackKitTests.DoesNotExist"], marker: "noLegacy")
-        XCTAssertEqual(Prefs.relativePercent, 20)
-        XCTAssertTrue(Prefs.enabled)
     }
 }

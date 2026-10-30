@@ -2,8 +2,7 @@
 
 ## 1.0.0 — 2026-10-30
 
-Midtrack is the new name for Song Seeker. The seek engine, its guardrails, and
-its watcher behaviour are unchanged; the app around them is new.
+First Midtrack release: **Skip to the good part — automatically.**
 
 ### Added
 - A conventional main window with **Control**, **Players**, **Diagnostics**,
@@ -11,23 +10,23 @@ its watcher behaviour are unchanged; the app around them is new.
 - A first-run welcome sheet, a Dock icon while a window is open, and a menu bar
   item that returns to accessory mode when the window closes.
 - A **Players** tab for the ignore list, with the active player marked.
+- An **Enable guardrails** switch, off by default. While off, Min length and Max
+  jump are ignored and their sliders are locked; turning it on applies both.
 - A diagnostics page with live status, log access, a copyable report, and the
   `--check` command.
-- `--render-window`, `--render-onboarding`, and `--tab` for reviewing layouts
-  off-screen.
+- A monochrome template version of the app mark for the menu bar, dimmed while
+  paused.
+- `--render-window`, `--render-panel`, `--render-onboarding`,
+  `--render-menubar-icon`, and `--tab` for reviewing layouts off-screen.
 - A generated app icon (`scripts/make-icon.py`): a teal waveform bisected by an
   orange midpoint marker.
 
 ### Changed
-- Renamed the package, targets, types, bundle identifier, executable, log
-  directory, and launcher from Song Seeker to Midtrack.
 - Rebuilt the panel and controls in the visual language of Konvolusi: card
   surfaces, section headers, ⓘ popovers, monospaced values, and shared controls
   between the panel and the window.
-- Preferences now live in `com.asep.midtrack`; the first launch copies the rule,
-  ignore list, seen players, and last jump once from the old domains.
 - The status line now calls the master switch **Running/Paused** rather than
-  on/off, matching the new Start/Pause button.
+  on/off, matching the Start/Pause button.
 - The panel is 420 pt wide and no longer carries the player list; **Players…**
   opens the full tab instead.
 

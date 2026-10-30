@@ -1,10 +1,6 @@
 import Foundation
 
-/// Persisted settings.
-///
-/// Midtrack writes its own preferences domain. The first launch copies the
-/// settings of the app it was renamed from (Song Seeker), so a rebrand does not
-/// silently reset the rule, the ignore list, or the last jump.
+/// Persisted settings for Midtrack's rule, ignore list, and last jump.
 public enum Prefs {
     public enum Mode: String, CaseIterable, Identifiable {
         case absolute
@@ -33,7 +29,8 @@ public enum Prefs {
         return UserDefaults(suiteName: suiteName) ?? .standard
     }()
 
-    /// Guardrail defaults, the same as the Android app.
+    /// Guardrail defaults, the same as the Android app. They only apply while
+    /// `guardrailsEnabled` is on.
     public static let defaultMinDurationSeconds = 90
     public static let defaultMaxTargetPercent = 80
 
@@ -45,6 +42,7 @@ public enum Prefs {
         static let randomMin = "randomMin"
         static let randomMax = "randomMax"
         static let seekOnAutoNext = "seekOnAutoNext"
+        static let guardrailsEnabled = "guardrailsEnabled"
         static let minDurationSeconds = "minDurationSeconds"
         static let maxTargetPercent = "maxTargetPercent"
         static let lastJumpTitle = "lastJumpTitle"
@@ -93,6 +91,15 @@ public enum Prefs {
     public static var seekOnAutoNext: Bool {
         get { store.object(forKey: Key.seekOnAutoNext) as? Bool ?? true }
         set { store.set(newValue, forKey: Key.seekOnAutoNext) }
+    }
+
+    /// Whether Min length and Max jump are applied at all. Off by default: a
+    /// fresh install jumps every track of known length, and the guardrails are
+    /// opt-in. The values below are kept while the switch is off, so turning it
+    /// back on restores the previous limits.
+    public static var guardrailsEnabled: Bool {
+        get { store.object(forKey: Key.guardrailsEnabled) as? Bool ?? false }
+        set { store.set(newValue, forKey: Key.guardrailsEnabled) }
     }
 
     /// Skip anything shorter than this. 0 turns the guardrail off.
@@ -162,6 +169,7 @@ public enum Prefs {
                      randomMin: randomMin,
                      randomMax: randomMax,
                      seekOnAutoNext: seekOnAutoNext,
+                     guardrailsEnabled: guardrailsEnabled,
                      minDurationSeconds: minDurationSeconds,
                      maxTargetPercent: maxTargetPercent)
     }
@@ -174,50 +182,12 @@ public enum Prefs {
         randomMin = settings.randomMin
         randomMax = settings.randomMax
         seekOnAutoNext = settings.seekOnAutoNext
+        guardrailsEnabled = settings.guardrailsEnabled
         minDurationSeconds = settings.minDurationSeconds
         maxTargetPercent = settings.maxTargetPercent
     }
 
     // MARK: - Helpers
-
-    /// Copies the settings of the pre-rename app on first launch.
-    ///
-    /// Song Seeker stored everything in `com.asep.ytmradioseek.mac`; the earlier
-    /// AppKit build used `com.asep.songseeker`. Only a virgin Midtrack domain is
-    /// filled, and only once, so a later deliberate reset is not undone on the
-    /// next launch.
-    public static func migrateLegacySettingsIfNeeded() {
-        migrateLegacySettings(from: ["com.asep.ytmradioseek.mac", "com.asep.songseeker"],
-                             marker: "migratedFromSongSeeker")
-    }
-
-    /// The injectable form, so the tests can exercise the copy without touching
-    /// the real legacy domain.
-    static func migrateLegacySettings(from legacyDomains: [String], marker: String) {
-        guard !store.bool(forKey: marker) else { return }
-        store.set(true, forKey: marker)
-        guard store.object(forKey: Key.enabled) == nil else { return }
-
-        let keys = [
-            Key.enabled, Key.mode, Key.absoluteSeconds, Key.relativePercent,
-            Key.randomMin, Key.randomMax, Key.seekOnAutoNext,
-            Key.minDurationSeconds, Key.maxTargetPercent,
-            Key.lastJumpTitle, Key.lastJumpAt,
-            Key.ignoredPlayers, Key.seenPlayers,
-        ]
-
-        for domain in legacyDomains {
-            guard let legacy = UserDefaults(suiteName: domain) else { continue }
-            let present = keys.filter { legacy.object(forKey: $0) != nil }
-            guard !present.isEmpty else { continue }
-            for key in present {
-                if let value = legacy.object(forKey: key), store.object(forKey: key) == nil {
-                    store.set(value, forKey: key)
-                }
-            }
-            return
-        }
-    }
 
     /// Keys of features this build no longer has (the per-player rules). Dropped
     /// once on launch so an upgraded preferences file stays legible. The ignore

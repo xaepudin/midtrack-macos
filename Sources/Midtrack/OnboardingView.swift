@@ -16,7 +16,7 @@ struct OnboardingView: View {
 
             Divider()
 
-            Text("Midtrack lives in the menu bar. Click the skip icon to pause or start it, "
+            Text("Midtrack lives in the menu bar. Click the waveform icon to pause or start it, "
                 + "choose where every track should begin, and jump the song already playing. "
                 + "The main window appears in the Dock while it is open; closing it returns "
                 + "Midtrack to the menu bar and keeps watching.")
@@ -40,7 +40,7 @@ struct OnboardingView: View {
 
                 OnboardingRow(
                     icon: "forward.end.fill",
-                    title: "Start from the good part",
+                    title: "Pick the moment",
                     detail: "The first track is only a baseline. From the next track on, Midtrack "
                         + "jumps to the time, percentage, or random window you choose."
                 )
@@ -111,7 +111,7 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Welcome to Midtrack")
                     .font(.largeTitle.bold())
-                Text("Every song, from the good part.")
+                Text("Skip to the good part — automatically.")
                     .font(.title3)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

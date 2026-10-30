@@ -20,8 +20,11 @@ enum Diagnostics {
             MainActor.assumeIsolated { renderOnboarding(to: URL(fileURLWithPath: path)) }
             exit(0)
         }
+        if let path = value(for: "--render-menubar-icon") {
+            MainActor.assumeIsolated { renderMenuBarIcon(to: URL(fileURLWithPath: path)) }
+            exit(0)
+        }
         guard CommandLine.arguments.contains("--check") else { return }
-        Prefs.migrateLegacySettingsIfNeeded()
         let report = report()
         print(report.text)
         exit(report.passed ? 0 : 1)
@@ -68,7 +71,6 @@ enum Diagnostics {
 
     @MainActor
     private static func stagedModel() -> AppModel {
-        Prefs.migrateLegacySettingsIfNeeded()
         let model = AppModel()
         let script = JXAReader.defaultScriptURL()
         let snapshot = FileManager.default.fileExists(atPath: script.path) ? firstSnapshot(script: script) : nil
@@ -86,6 +88,35 @@ enum Diagnostics {
                size: CGSize(width: 600, height: 640),
                fitsHeight: true,
                to: url)
+    }
+
+    /// `--render-menubar-icon <file.png>` renders the template menu bar mark at
+    /// 8x on a neutral background, so its silhouette can be reviewed.
+    @MainActor
+    private static func renderMenuBarIcon(to url: URL) {
+        let size = NSSize(width: 180, height: 180)
+        let canvas = NSImage(size: size)
+        canvas.lockFocus()
+        NSColor(calibratedWhite: 0.94, alpha: 1).setFill()
+        NSRect(origin: .zero, size: size).fill()
+        MenuBarIcon.image.draw(in: NSRect(x: 18, y: 18, width: 144, height: 144),
+                               from: .zero,
+                               operation: .sourceOver,
+                               fraction: 1)
+        canvas.unlockFocus()
+
+        guard let tiff = canvas.tiffRepresentation,
+              let representation = NSBitmapImageRep(data: tiff),
+              let png = representation.representation(using: .png, properties: [:]) else {
+            print("could not render the menu bar icon")
+            return
+        }
+        do {
+            try png.write(to: url)
+            print("wrote \(url.path) (\(Int(size.width * 2))x\(Int(size.height * 2)))")
+        } catch {
+            print("could not write \(url.path): \(error.localizedDescription)")
+        }
     }
 
     /// Hosts a SwiftUI view in a real off-screen window and captures it with

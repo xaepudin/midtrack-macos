@@ -12,9 +12,11 @@ public struct SeekSettings: Equatable {
     public var randomMin: Int
     public var randomMax: Int
     public var seekOnAutoNext: Bool
-    /// Skip tracks shorter than this many seconds. 0 turns the guardrail off.
+    /// Whether the two limits below are applied. Off by default.
+    public var guardrailsEnabled: Bool
+    /// Skip tracks shorter than this many seconds. 0 turns the limit off.
     public var minDurationSeconds: Int
-    /// Never jump past this percent of the track. 0 turns the guardrail off.
+    /// Never jump past this percent of the track. 0 turns the limit off.
     public var maxTargetPercent: Int
 
     public init(mode: Prefs.Mode,
@@ -23,6 +25,7 @@ public struct SeekSettings: Equatable {
                 randomMin: Int,
                 randomMax: Int,
                 seekOnAutoNext: Bool = true,
+                guardrailsEnabled: Bool = false,
                 minDurationSeconds: Int = 0,
                 maxTargetPercent: Int = 0) {
         self.mode = mode
@@ -31,6 +34,7 @@ public struct SeekSettings: Equatable {
         self.randomMin = randomMin
         self.randomMax = randomMax
         self.seekOnAutoNext = seekOnAutoNext
+        self.guardrailsEnabled = guardrailsEnabled
         self.minDurationSeconds = minDurationSeconds
         self.maxTargetPercent = maxTargetPercent
     }
@@ -44,8 +48,10 @@ public struct SeekSettings: Equatable {
         return low...clamp(max(randomMin, randomMax), low...99)
     }
 
-    /// " · >1:30, ≤80%" — the guardrails in force, or "" when both are off.
+    /// " · >1:30, ≤80%" — the guardrails in force, " · guardrails off" when the
+    /// toggle is off, or "" when the toggle is on but both limits are 0.
     public var guardrailSummary: String {
+        guard guardrailsEnabled else { return " · guardrails off" }
         var parts: [String] = []
         if minDurationSeconds > 0 { parts.append(">\(SeekLogic.format(Double(minDurationSeconds)))") }
         if (1...99).contains(maxTargetPercent) { parts.append("≤\(maxTargetPercent)%") }
@@ -55,10 +61,10 @@ public struct SeekSettings: Equatable {
 
 /// Where to jump. Kept free of any media plumbing so it can be tested directly.
 ///
-/// Three guardrails borrowed from the Android app stop a jump from ruining a
-/// song: a minimum length, a ceiling on how far in a jump may land, and the rule
-/// that a track whose length is unknown is never touched — a live stream, an ad
-/// or a video clip has no "safe spot" to aim at.
+/// A track whose length is unknown is never touched — a live stream, an ad or a
+/// video clip has no "safe spot" to aim at. Two optional limits sit on top of
+/// that: a minimum track length and a ceiling on how far in a jump may land.
+/// They are off until the Guardrails toggle is turned on.
 public enum SeekLogic {
     /// A track needs a usable length before anything can be aimed at.
     public static func hasLength(_ duration: Double) -> Bool { duration > 1 }
@@ -69,7 +75,9 @@ public enum SeekLogic {
         guard hasLength(duration) else {
             return "track length unknown (live stream, ad, or no duration metadata)"
         }
-        if settings.minDurationSeconds > 0, duration < Double(settings.minDurationSeconds) {
+        if settings.guardrailsEnabled,
+           settings.minDurationSeconds > 0,
+           duration < Double(settings.minDurationSeconds) {
             return "track is \(format(duration)) — shorter than the "
                 + "\(format(Double(settings.minDurationSeconds))) minimum"
         }
@@ -98,7 +106,7 @@ public enum SeekLogic {
         guard target.isFinite, target > 0 else { return nil }
         // Never the very end, and never past the user's ceiling.
         var ceiling = duration - 2
-        if (1...99).contains(settings.maxTargetPercent) {
+        if settings.guardrailsEnabled, (1...99).contains(settings.maxTargetPercent) {
             ceiling = min(ceiling, duration * Double(settings.maxTargetPercent) / 100)
         }
         return min(max(target, 0.5), max(ceiling, 1))

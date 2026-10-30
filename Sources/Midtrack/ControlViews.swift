@@ -194,7 +194,7 @@ struct StatusHeader: View {
                 Text("Midtrack")
                     .font(.headline)
                 if !compact {
-                    Text("Every song, from the good part.")
+                    Text("Skip to the good part — automatically.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -497,44 +497,64 @@ struct GuardrailsSection: View {
         title: "Guardrails",
         message: "Min length skips short items — an ad, a jingle, a 26-second video in a browser "
             + "tab. Max jump keeps a jump away from the outro. A track with no known length is "
-            + "never jumped. 0 turns a guardrail off."
+            + "never jumped. Off by default; turning this on applies both limits."
     )
 
     var body: some View {
         let content = VStack(alignment: .leading, spacing: compact ? 10 : 16) {
             SectionHeader(title: "Guardrails", systemImage: "shield.lefthalf.filled", info: info, compact: compact)
 
-            RuleSlider(
-                label: "Min length",
-                value: model.settings.minDurationSeconds == 0
-                    ? "off"
-                    : SeekLogic.format(Double(model.settings.minDurationSeconds)),
-                binding: $model.settings.int(\.minDurationSeconds),
-                range: 0...300,
-                step: 15,
-                info: InfoContent(
-                    title: "Min length",
-                    message: "Nothing shorter than this is jumped. It keys on the track's length, "
-                        + "not on which app is playing. 0 turns it off."
-                ),
-                compact: compact
-            )
+            HStack(spacing: 6) {
+                Toggle("Enable guardrails", isOn: $model.settings.guardrailsEnabled)
+                    .toggleStyle(.switch)
+                    .controlSize(compact ? .small : .regular)
+                    .help("Applies Min length and Max jump. Off by default.")
+                    .accessibilityHint("Turns the min length and max jump limits on or off")
+                InfoButton(
+                    title: "Enable guardrails",
+                    message: "When off, Min length and Max jump are ignored and their sliders cannot "
+                        + "be changed. A track with no known length is still never jumped."
+                )
+                Spacer(minLength: 0)
+            }
 
-            RuleSlider(
-                label: "Max jump",
-                value: model.settings.maxTargetPercent == 0 ? "off" : "\(model.settings.maxTargetPercent)%",
-                binding: $model.settings.int(\.maxTargetPercent),
-                range: 0...100,
-                step: 5,
-                info: InfoContent(
-                    title: "Max jump",
-                    message: "Never land past this percent of a track, so a long jump cannot drop "
-                        + "you into the outro. 0 turns it off."
-                ),
-                compact: compact
-            )
+            VStack(alignment: .leading, spacing: compact ? 10 : 16) {
+                RuleSlider(
+                    label: "Min length",
+                    value: model.settings.minDurationSeconds == 0
+                        ? "off"
+                        : SeekLogic.format(Double(model.settings.minDurationSeconds)),
+                    binding: $model.settings.int(\.minDurationSeconds),
+                    range: 0...300,
+                    step: 15,
+                    info: InfoContent(
+                        title: "Min length",
+                        message: "Nothing shorter than this is jumped. It keys on the track's length, "
+                            + "not on which app is playing. 0 turns it off."
+                    ),
+                    compact: compact
+                )
 
-            Text("0 = off · unknown track lengths are never jumped")
+                RuleSlider(
+                    label: "Max jump",
+                    value: model.settings.maxTargetPercent == 0 ? "off" : "\(model.settings.maxTargetPercent)%",
+                    binding: $model.settings.int(\.maxTargetPercent),
+                    range: 0...100,
+                    step: 5,
+                    info: InfoContent(
+                        title: "Max jump",
+                        message: "Never land past this percent of a track, so a long jump cannot drop "
+                            + "you into the outro. 0 turns it off."
+                    ),
+                    compact: compact
+                )
+            }
+            .disabled(!model.settings.guardrailsEnabled)
+            .opacity(model.settings.guardrailsEnabled ? 1 : 0.42)
+
+            Text(model.settings.guardrailsEnabled
+                ? "0 = off · unknown track lengths are never jumped"
+                : "Off — limits below are ignored · unknown lengths still skipped")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
