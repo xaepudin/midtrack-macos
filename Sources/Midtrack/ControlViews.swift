@@ -95,68 +95,6 @@ struct SectionHeader: View {
     }
 }
 
-/// A section that can be folded away. Only the menu bar panel uses this; the
-/// main window always shows the whole surface. The summary on the right keeps
-/// the state readable while the section is collapsed.
-struct CollapsibleSection<Content: View>: View {
-    let title: String
-    var info: InfoContent? = nil
-    var summary: String? = nil
-    @Binding var isExpanded: Bool
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: isExpanded ? 8 : 0) {
-            HStack(spacing: 6) {
-                Button {
-                    // Deliberately not animated: the menu bar window changes its
-                    // height with the content, and animating that resize made the
-                    // panel clip and stutter. The chevron still eases around.
-                    isExpanded.toggle()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.secondary)
-                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                            .animation(.easeOut(duration: 0.12), value: isExpanded)
-                            .accessibilityHidden(true)
-                        Text(title)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help(isExpanded ? "Collapse \(title)" : "Expand \(title)")
-                .accessibilityLabel(title)
-                .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
-                .accessibilityHint("Shows or hides \(title.lowercased())")
-
-                if let info {
-                    InfoButton(title: info.title, message: info.message)
-                }
-
-                Spacer(minLength: 0)
-
-                if let summary {
-                    Text(summary)
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.primary.opacity(0.06), in: Capsule())
-                }
-            }
-
-            if isExpanded {
-                content
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
 /// A horizontal track-position meter: how far into the song playback is, plus
 /// where the next jump lands — a marker for Time/Percent, a band for Random.
 struct TrackMeter: View {
@@ -661,7 +599,6 @@ struct JumpTargetSection: View {
 struct GuardrailsSection: View {
     @ObservedObject var model: AppModel
     var compact: Bool = true
-    var showsHeading: Bool = true
 
     static let info = InfoContent(
         title: "Guardrails",
@@ -672,10 +609,8 @@ struct GuardrailsSection: View {
 
     var body: some View {
         let content = VStack(alignment: .leading, spacing: compact ? 8 : 16) {
-            if showsHeading {
-                SectionHeader(title: "Guardrails", systemImage: "shield.lefthalf.filled",
-                              info: Self.info, compact: compact)
-            }
+            SectionHeader(title: "Guardrails", systemImage: "shield.lefthalf.filled",
+                          info: Self.info, compact: compact)
 
             HStack(spacing: 6) {
                 Toggle("Enable guardrails", isOn: $model.settings.guardrailsEnabled)
@@ -778,12 +713,12 @@ struct PlayersSection: View {
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 VStack(alignment: .leading, spacing: compact ? 2 : 6) {
-                    ForEach(Array(model.seenPlayers.prefix(compact ? 4 : 24)), id: \.self) { player in
+                    ForEach(Array(model.seenPlayers.prefix(compact ? 6 : 24)), id: \.self) { player in
                         row(player)
                     }
                 }
-                if compact, model.seenPlayers.count > 4 {
-                    Text("+\(model.seenPlayers.count - 4) more in Players…")
+                if compact, model.seenPlayers.count > 6 {
+                    Text("+\(model.seenPlayers.count - 6) more — open Midtrack for the full list.")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
@@ -909,38 +844,6 @@ struct MidtrackControls: View {
     @ObservedObject var status: StatusStore
     var compact: Bool = true
 
-    /// The panel is an accordion: opening Guardrails folds Players away and
-    /// vice versa, so the menu bar window stays a reasonable height. Players is
-    /// open by default so the ignore selection is visible without a click.
-    private enum PanelSection: String {
-        case none
-        case guardrails
-        case players
-    }
-
-    @AppStorage("PanelExpandedSection") private var expandedSectionRaw = PanelSection.players.rawValue
-
-    private var expandedSection: PanelSection {
-        PanelSection(rawValue: expandedSectionRaw) ?? .players
-    }
-
-    private func expansion(for section: PanelSection) -> Binding<Bool> {
-        Binding(
-            get: { expandedSection == section },
-            set: { isExpanded in
-                expandedSectionRaw = isExpanded ? section.rawValue : PanelSection.none.rawValue
-            }
-        )
-    }
-
-    private var guardrailsSummary: String {
-        model.settings.guardrailsEnabled ? "On" : "Off"
-    }
-
-    private var playersSummary: String {
-        model.ignoredPlayers.isEmpty ? "None ignored" : "\(model.ignoredPlayers.count) ignored"
-    }
-
     var body: some View {
         Group {
             if compact {
@@ -950,12 +853,6 @@ struct MidtrackControls: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .onAppear {
-            // Each time the menu bar panel opens, show the player selection and
-            // start Guardrails folded away. The accordion only changes while the
-            // panel is on screen.
-            if compact { expandedSectionRaw = PanelSection.players.rawValue }
-        }
     }
 
     private var compactLayout: some View {
@@ -966,23 +863,7 @@ struct MidtrackControls: View {
             Divider()
             JumpTargetSection(model: model, compact: true)
             Divider()
-            CollapsibleSection(
-                title: "Guardrails",
-                info: GuardrailsSection.info,
-                summary: guardrailsSummary,
-                isExpanded: expansion(for: .guardrails)
-            ) {
-                GuardrailsSection(model: model, compact: true, showsHeading: false)
-            }
-            Divider()
-            CollapsibleSection(
-                title: "Players to ignore",
-                info: PlayersSection.info,
-                summary: playersSummary,
-                isExpanded: expansion(for: .players)
-            ) {
-                PlayersSection(model: model, compact: true, showsHeading: false)
-            }
+            PlayersSection(model: model, compact: true)
             StatusMessages(model: model, compact: true)
             Divider()
             InfoFooter(model: model, compact: true)

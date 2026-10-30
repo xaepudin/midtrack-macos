@@ -13,9 +13,6 @@ First Midtrack release: **Skip to the good part — automatically.**
   the active player marked.
 - An **Enable guardrails** switch, off by default. While off, Min length and Max
   jump are ignored and their sliders are locked; turning it on applies both.
-- A collapsible menu bar panel: **Players to ignore** opens by default, while
-  **Guardrails** starts collapsed. Opening one folds the other away so the panel
-  stays menu-bar sized.
 - A two-handle **Random window** slider for Random mode, replacing the separate
   From and To sliders.
 - A diagnostics page with live status, log access, a copyable report, and the
@@ -33,13 +30,12 @@ First Midtrack release: **Skip to the good part — automatically.**
   between the panel and the window.
 - The status line now calls the master switch **Running/Paused** rather than
   on/off, matching the Start/Pause button.
-- The panel is 420 pt wide and no longer carries the player list; **Players…**
-  opens the full tab instead.
+- The panel is 420 pt wide and shows the **Players to ignore** list directly.
+  Guardrails and Settings stay in the main window, and the panel footer has only
+  **Open Midtrack** and **Quit Midtrack**.
 
 ### Fixed
 - Slider values snap while the track stays continuous, so macOS no longer draws
   a tick mark for every integer.
-- Panel disclosure no longer animates the menu bar window height — only the
-  chevron eases — so expanding a section no longer clips or stutters.
 - Preferences no longer ask `UserDefaults` for the app's own bundle identifier
   as a suite (which Foundation rejects).

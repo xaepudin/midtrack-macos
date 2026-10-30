@@ -51,10 +51,10 @@ jump.
 | **About** | The icon, version, and what Midtrack is (and is not) |
 
 The Control tab is deliberately the same surface as the menu bar panel, just
-roomier. The panel is an accordion so it stays menu-bar sized: each time it
-opens, **Players to ignore** is expanded and **Guardrails** starts collapsed (its
-header shows On/Off). Opening one folds the other away. **Players…** in the
-footer opens the full tab.
+roomier. The panel keeps the quick controls — status, now playing, jump target,
+and the always-visible **Players to ignore** list. Guardrails and Settings live
+in the main window; the panel footer has only **Open Midtrack** and **Quit
+Midtrack**.
 
 ### Controls
 
@@ -66,7 +66,7 @@ footer opens the full tab.
 | **Seconds / Percent into the song** | A fixed offset, or the fraction of every track |
 | **Random window** | One two-handle slider; drag either end to set where Random may land |
 | **Also seek on natural end** | Off = only seek tracks you skipped to; tracks that ended by themselves are left alone |
-| **Enable guardrails** | Off by default. While off, Min length and Max jump are ignored and their sliders are locked; turning it on applies the values below |
+| **Enable guardrails** | Main window only. Off by default. While off, Min length and Max jump are ignored and their sliders are locked; turning it on applies the values below |
 | **Min length** | Nothing shorter than this is jumped — an ad, a jingle, a 26-second X/Threads video. It keys on the *track's length*, not on which app is playing. Default 1:30. 0 turns this limit off |
 | **Max jump** | Never jump past this percent, so a long jump cannot land in the outro. Default 80%. 0 turns this limit off |
 | **Pos** meter | Green = how far in, orange tick = where the next jump lands (a shaded band in Random mode) |

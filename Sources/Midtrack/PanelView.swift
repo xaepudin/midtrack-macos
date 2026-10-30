@@ -1,9 +1,8 @@
 import AppKit
-import MidtrackKit
 import SwiftUI
 
 /// The menu bar quick panel. It uses the same `MidtrackControls` as the main
-/// window, plus explicit entry points to the conventional window and Settings.
+/// window, plus just two entry points: open the full window, or quit.
 struct PanelView: View {
     var model: AppModel
     var nowPlaying: NowPlayingStore
@@ -18,28 +17,12 @@ struct PanelView: View {
             Divider()
 
             HStack(spacing: 6) {
-                Button("Open Midtrack…") {
+                Button("Open Midtrack") {
                     openWindow(id: "main")
                     NSApp.activate(ignoringOtherApps: true)
                 }
                 .help("Open the full Midtrack window.")
                 .accessibilityHint("Opens the full Midtrack window")
-
-                Button("Players…") {
-                    UserDefaults.standard.set(MainTab.players.rawValue, forKey: "MainTab")
-                    openWindow(id: "main")
-                    NSApp.activate(ignoringOtherApps: true)
-                }
-                .help("Choose which players Midtrack leaves alone.")
-                .accessibilityHint("Opens the players Midtrack leaves alone")
-
-                Button("Settings…") {
-                    UserDefaults.standard.set(MainTab.settings.rawValue, forKey: "MainTab")
-                    openWindow(id: "main")
-                    NSApp.activate(ignoringOtherApps: true)
-                }
-                .help("Open Midtrack settings.")
-                .accessibilityHint("Opens Midtrack settings")
 
                 Spacer()
 
