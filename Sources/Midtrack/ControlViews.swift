@@ -180,15 +180,14 @@ struct StatusHeader: View {
 
     var body: some View {
         let content = HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(status.enabled ? Color.green.opacity(0.14) : Color.secondary.opacity(0.10))
-                    .frame(width: 42, height: 42)
-                Image(systemName: status.enabled ? "forward.end.circle.fill" : "forward.end.circle")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(status.enabled ? Color.green : Color.secondary)
-            }
-            .accessibilityHidden(true)
+            // The same artwork as the Dock/app icon, so the mark is identical
+            // in the panel, the window, the Dock, and About.
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: 44, height: 44)
+                .opacity(status.enabled ? 1 : 0.55)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Midtrack")
