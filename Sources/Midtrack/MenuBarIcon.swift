@@ -10,8 +10,8 @@ enum MenuBarIcon {
             NSColor.black.setFill()
 
             let heights: [CGFloat] = [3.4, 6.0, 8.6, 11.2, 8.6, 6.0, 3.4]
-            let barWidth: CGFloat = 1.35
-            let gap: CGFloat = 0.7
+            let barWidth: CGFloat = 1.6
+            let gap: CGFloat = 0.85
             let total = CGFloat(heights.count) * barWidth + CGFloat(heights.count - 1) * gap
             let startX = (rect.width - total) / 2
 
