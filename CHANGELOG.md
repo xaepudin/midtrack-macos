@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.1 — 2026-11-01
+
+### Fixed
+- The status header in the panel and main window now shows the real app icon
+  instead of an SF Symbol that read as play/pause.
+- The menu bar mark fills more of its template, narrowing the empty space to
+  its left and right.
+- The menu bar panel is pinned to its ideal content height so it cannot keep
+  extra vertical slack when its content changes.
+
 ## 1.0.0 — 2026-10-30
 
 First Midtrack release: **Skip to the good part — automatically.**
